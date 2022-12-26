@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Dispatcher" type="Application" factoryName="Application" nameIsGenerated="true">
+    <option name="MAIN_CLASS_NAME" value="Dispatcher" />
+    <module name="pseudo-os" />
+    <option name="PROGRAM_PARAMETERS" value="src/main/resources/processes.txt src/main/resources/files.txt" />
+    <option name="VM_PARAMETERS" value="-Dprofile=debug" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
