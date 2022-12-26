@@ -1,9 +1,8 @@
 import memory.MemoryManager;
-import processes.Process;
 import processes.ProcessReader;
 import processes.ProcessCreationRequest;
 import queues.ProcessManager;
-import util.Log;
+import util.Logger;
 
 import java.util.List;
 
@@ -43,7 +42,7 @@ public class Dispatcher {
             if (nextProcess.getStartTime() == time) {
                 // tentar alocar o espaco na memoria
                 // chamar gerenciador de filas pra criar o novo Process
-                Log.debug(nextProcess.toString());
+                Logger.debug(nextProcess.toString());
                 processCreationRequestList.remove(0);
             }
 
