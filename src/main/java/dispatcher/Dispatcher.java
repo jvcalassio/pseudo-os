@@ -1,7 +1,11 @@
+import files.FileSystemInitializationRequest;
+import files.FileManager;
+import files.FileReader;
 import memory.MemoryManager;
-import processes.ProcessReader;
 import processes.ProcessCreationRequest;
+import processes.ProcessReader;
 import queues.ProcessManager;
+import queues.QueueRunner;
 import util.Logger;
 
 import java.util.List;
@@ -9,28 +13,43 @@ import java.util.List;
 public class Dispatcher {
     private final MemoryManager memoryManager;
     private final ProcessManager processManager;
+    private final QueueRunner queueRunner;
+    private final FileManager fileManager;
 
-    public Dispatcher(MemoryManager memoryManager, ProcessManager processManager) {
+    public Dispatcher(final MemoryManager memoryManager,
+                      final ProcessManager processManager,
+                      final QueueRunner queueRunner,
+                      final FileManager fileManager) {
         this.memoryManager = memoryManager;
         this.processManager = processManager;
+        this.queueRunner = queueRunner;
+        this.fileManager = fileManager;
     }
 
     public static void main(String[] args) throws InterruptedException {
-        if (args.length < 2) {
+        if (args.length != 2) {
             System.out.println("Run with ./dispatcher processes.txt files.txt");
             System.exit(1);
         }
         final String processes = args[0];
         final String files = args[1];
 
+        final MemoryManager memoryManager = new MemoryManager();
+        final FileManager fileManager = new FileManager();
+        final ProcessManager processManager = new ProcessManager();
+        final QueueRunner queueRunner = new QueueRunner(processManager);
+
         final Dispatcher dispatcher = new Dispatcher(
-                new MemoryManager(),
-                new ProcessManager()
+                memoryManager,
+                processManager,
+                queueRunner,
+                fileManager
         );
 
         final List<ProcessCreationRequest> processCreationRequestList = ProcessReader.read(processes);
-        // ler o files.txt e deixar pronto as instrucoes no gerenciador de arquivos
+        final FileSystemInitializationRequest fileSystemInitializationRequest = FileReader.read(files);
 
+        fileManager.initialize(fileSystemInitializationRequest);
         dispatcher.dispatch(processCreationRequestList);
     }
     private void dispatch(final List<ProcessCreationRequest> processCreationRequestList)
@@ -40,15 +59,29 @@ public class Dispatcher {
         while (!processCreationRequestList.isEmpty()) {
             final ProcessCreationRequest nextProcess = processCreationRequestList.get(0);
             if (nextProcess.getStartTime() == time) {
-                // tentar alocar o espaco na memoria
-                // chamar gerenciador de filas pra criar o novo Process
                 Logger.debug(nextProcess.toString());
+                // reavaliar como funciona essas filas aqui
+                // enviar pra fila unica, q vai ser processada e reencaminhar pra outras filas internas
+                // (ver desenho na spec)
+//                if (nextProcess.getPriority() == 0) {
+//                    final int offset = memoryManager.allocateRealTimeBlocks(nextProcess.getBlocks());
+//                    processManager.enqueueRealTimeProcess(nextProcess, offset);
+//                } else {
+//                    final int offset = memoryManager.allocateUserBlocks(nextProcess.getBlocks());
+//
+//                }
+                this.queueRunner.run();
                 processCreationRequestList.remove(0);
             }
 
             Thread.sleep(1000);
             time++;
         }
+
+        // esperar ate todos os processos finalizarem
+        // talvez com um semaforo?
+
+        queueRunner.stop();
     }
 
 }

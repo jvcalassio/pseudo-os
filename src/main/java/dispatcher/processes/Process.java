@@ -12,6 +12,7 @@ public class Process {
     private final boolean scanners;
     private final boolean modems;
     private final boolean drivers;
+    private ProcessStatus status;
 
     public Process(final ProcessCreationRequest processCreationRequest,
                    final int currentMemoryOffset) {
@@ -26,6 +27,28 @@ public class Process {
         this.modems = processCreationRequest.hasModems();
         this.drivers = processCreationRequest.hasDrivers();
         this.offset = currentMemoryOffset;
+
+        this.ready();
+    }
+
+    public int getPID() {
+        return PID;
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
+
+    public void block() {
+        this.status = ProcessStatus.BLOCKED;
+    }
+
+    public void run() {
+        this.status = ProcessStatus.RUNNING;
+    }
+
+    public void ready() {
+        this.status = ProcessStatus.READY;
     }
 
     @Override

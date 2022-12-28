@@ -26,4 +26,5 @@ public class Block {
     public int getContent() {
         return content;
     }
+
 }
