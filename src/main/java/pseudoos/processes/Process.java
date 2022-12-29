@@ -1,10 +1,12 @@
 package processes;
 
+import util.Logger;
+
 public class Process {
 
     public static int processCounter = 0;
-    private final int PID;
-    private int time;
+    private final Integer PID;
+    private Double time;
     private int priority;
     private final int blocks;
     private final int offset;
@@ -13,13 +15,14 @@ public class Process {
     private final boolean modems;
     private final boolean drivers;
     private ProcessStatus status;
+    private int PC;
 
     public Process(final ProcessCreationRequest processCreationRequest,
                    final int currentMemoryOffset) {
         this.PID = processCounter;
         processCounter++;
 
-        this.time = processCreationRequest.getCpuTime();
+        this.time = (double) processCreationRequest.getCpuTime();
         this.priority = processCreationRequest.getPriority();
         this.blocks = processCreationRequest.getBlocks();
         this.printers = processCreationRequest.hasPrinters();
@@ -27,6 +30,7 @@ public class Process {
         this.modems = processCreationRequest.hasModems();
         this.drivers = processCreationRequest.hasDrivers();
         this.offset = currentMemoryOffset;
+        this.PC = currentMemoryOffset;
 
         this.ready();
     }
@@ -43,9 +47,7 @@ public class Process {
         this.status = ProcessStatus.BLOCKED;
     }
 
-    public void run() {
-        this.status = ProcessStatus.RUNNING;
-    }
+    public void run() { this.status = ProcessStatus.RUNNING; }
 
     public void ready() {
         this.status = ProcessStatus.READY;
@@ -63,6 +65,8 @@ public class Process {
                 ", scanners=" + scanners +
                 ", modems=" + modems +
                 ", drivers=" + drivers +
+                ", status=" + status +
+                ", PC=" + PC +
                 '}';
     }
 }

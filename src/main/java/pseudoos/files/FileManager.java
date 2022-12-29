@@ -1,8 +1,7 @@
 package files;
 
-import memory.Block;
-import memory.BlockUtils;
-import processes.ProcessInstruction;
+import common.block.Block;
+import common.block.BlockUtils;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -14,7 +13,7 @@ public class FileManager {
     private int totalBlocks;
     private List<Block> fileSystem;
     private final Map<String, FileData> fileMap;
-    private List<ProcessInstruction> instructions;
+    private List<FileInstruction> instructions;
 
     public FileManager() {
         this.totalBlocks = 0;
@@ -23,11 +22,13 @@ public class FileManager {
         this.fileSystem = new LinkedList<>();
     }
 
-    public void initialize(final FileSystemInitializationRequest fileSystemInitializationRequest) {
-        this.totalBlocks = fileSystemInitializationRequest.getTotalBlocks();
-        this.instructions = fileSystemInitializationRequest.getInstructions();
+    public void initialize(final int numberOfBlocks,
+                           final List<FileCreationRequest> fileCreationRequests,
+                           final List<FileInstruction> instructions) {
+        this.totalBlocks = numberOfBlocks;
+        this.instructions = instructions;
         this.fileSystem = BlockUtils.generateEmptyBlocks(this.totalBlocks);
-        fileSystemInitializationRequest.getInitialFileSystem().forEach(this::createFile);
+        fileCreationRequests.forEach(this::createFile);
 
         fileMap.forEach((key, value) ->
                 BlockUtils.allocateBlocks(value.getStartingPosition(),

@@ -4,7 +4,6 @@ public class FileData {
 
     private final Integer startingPosition;
     private final int size;
-
     private final FileOwnedBy ownedBy;
     private final Integer ownerPID;
 

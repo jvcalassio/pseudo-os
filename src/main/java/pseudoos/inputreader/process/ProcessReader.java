@@ -1,4 +1,6 @@
-package processes;
+package inputreader.process;
+
+import processes.ProcessCreationRequest;
 
 import java.io.IOException;
 import java.nio.file.Files;

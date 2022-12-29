@@ -1,28 +1,20 @@
-import files.FileSystemInitializationRequest;
+import inputreader.file.FileSystemInitializationRequest;
 import files.FileManager;
-import files.FileReader;
+import inputreader.file.FileReader;
 import memory.MemoryManager;
 import processes.ProcessCreationRequest;
-import processes.ProcessReader;
-import queues.ProcessManager;
-import queues.QueueRunner;
+import inputreader.process.ProcessReader;
 import util.Logger;
 
 import java.util.List;
 
 public class PseudoOS {
     private final MemoryManager memoryManager;
-    private final ProcessManager processManager;
-    private final QueueRunner queueRunner;
     private final FileManager fileManager;
 
     public PseudoOS(final MemoryManager memoryManager,
-                    final ProcessManager processManager,
-                    final QueueRunner queueRunner,
                     final FileManager fileManager) {
         this.memoryManager = memoryManager;
-        this.processManager = processManager;
-        this.queueRunner = queueRunner;
         this.fileManager = fileManager;
     }
 
@@ -36,21 +28,19 @@ public class PseudoOS {
 
         final MemoryManager memoryManager = new MemoryManager();
         final FileManager fileManager = new FileManager();
-        final ProcessManager processManager = new ProcessManager();
-        final QueueRunner queueRunner = new QueueRunner(processManager);
 
         final PseudoOS pseudoOS = new PseudoOS(
                 memoryManager,
-                processManager,
-                queueRunner,
                 fileManager
         );
 
-        final List<ProcessCreationRequest> processCreationRequestList = ProcessReader.read(processes);
-        final FileSystemInitializationRequest fileSystemInitializationRequest = FileReader.read(files);
+        final List<ProcessCreationRequest> processInfo = ProcessReader.read(processes);
+        final FileSystemInitializationRequest fileInfo = FileReader.read(files);
 
-        fileManager.initialize(fileSystemInitializationRequest);
-        pseudoOS.initialize(processCreationRequestList);
+        // onde colocar fileInfo.getInstructions() ?
+        // pode ser q de pra colocar em
+        fileManager.initialize(fileInfo.getTotalBlocks(), fileInfo.getInitialFileSystem(), fileInfo.getInstructions());
+        pseudoOS.initialize(processInfo);
     }
     private void initialize(final List<ProcessCreationRequest> processCreationRequestList)
             throws InterruptedException {
@@ -70,7 +60,7 @@ public class PseudoOS {
 //                    final int offset = memoryManager.allocateUserBlocks(nextProcess.getBlocks());
 //
 //                }
-                this.queueRunner.run();
+//                this.queueRunner.run();
                 processCreationRequestList.remove(0);
             }
 
@@ -81,7 +71,7 @@ public class PseudoOS {
         // esperar ate todos os processos finalizarem
         // talvez com um semaforo?
 
-        queueRunner.stop();
+//        queueRunner.stop();
     }
 
 }

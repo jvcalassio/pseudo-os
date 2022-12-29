@@ -1,4 +1,5 @@
-package memory;
+package common.block;
+
 
 public class Block {
     private Integer content;
@@ -9,7 +10,7 @@ public class Block {
         this.used = false;
     }
 
-    public void alloc(int content) {
+    public void alloc(Integer content) {
         this.content = content;
         this.used = true;
     }
@@ -23,8 +24,7 @@ public class Block {
         return used;
     }
 
-    public int getContent() {
+    public Integer getContent() {
         return content;
     }
-
 }

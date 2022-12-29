@@ -1,4 +1,4 @@
-package memory;
+package common.block;
 
 import java.util.List;
 import java.util.Random;
@@ -11,9 +11,11 @@ public class BlockUtils {
         return IntStream.range(0, number).mapToObj(num -> new Block()).collect(Collectors.toList());
     }
 
-    public static void allocateBlocks(final int start, final int end, final List<Block> blockList) {
+    public static void allocateBlocks(final int start,
+                                            final int end,
+                                            final List<Block> targetBlockList) {
         final Random random = new Random();
-        blockList.subList(start, end).forEach(block -> block.alloc(random.nextInt()));
+        targetBlockList.subList(start, end).forEach(block -> block.alloc(random.nextInt()));
     }
 
     // provavelmente implementar aqui algoritmo de encontrar first-fit

@@ -1,4 +1,4 @@
-package files;
+package common;
 
 public enum FileOperation {
     CREATE("0"),

@@ -1,5 +1,8 @@
 package memory;
 
+import common.block.Block;
+import common.block.BlockUtils;
+
 import java.util.List;
 
 public class MemoryManager {

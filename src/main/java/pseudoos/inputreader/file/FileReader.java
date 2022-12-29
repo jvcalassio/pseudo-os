@@ -1,6 +1,7 @@
-package files;
+package inputreader.file;
 
-import processes.ProcessInstruction;
+import common.FileOperation;
+import files.*;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,7 +15,7 @@ public class FileReader {
         int totalBlocks = 0;
         int usedBlocks = 0;
 
-        final List<ProcessInstruction> instructionList = new ArrayList<>();
+        final List<FileInstruction> instructionList = new ArrayList<>();
         final List<FileCreationRequest> initialFileSystem = new ArrayList<>();
 
         try (Stream<String> lines = Files.lines(Paths.get(file))) {
@@ -57,7 +58,7 @@ public class FileReader {
         );
     }
 
-    private static ProcessInstruction parseInstructionLine(final String line) {
+    private static FileInstruction parseInstructionLine(final String line) {
         final List<String> splitLine = List.of(line.replaceAll("\\s+", "").split(","));
 
         final int pid = Integer.parseInt(splitLine.get(0));
@@ -66,7 +67,7 @@ public class FileReader {
 
         if (operation == FileOperation.CREATE) {
             final int fileSize = Integer.parseInt(splitLine.get(3));
-            return new ProcessInstruction(
+            return new FileInstruction(
                     pid,
                     operation,
                     fileName,
@@ -74,7 +75,7 @@ public class FileReader {
             );
         }
 
-        return new ProcessInstruction(
+        return new FileInstruction(
                 pid,
                 operation,
                 fileName
