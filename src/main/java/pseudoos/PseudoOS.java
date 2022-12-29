@@ -10,16 +10,16 @@ import util.Logger;
 
 import java.util.List;
 
-public class Dispatcher {
+public class PseudoOS {
     private final MemoryManager memoryManager;
     private final ProcessManager processManager;
     private final QueueRunner queueRunner;
     private final FileManager fileManager;
 
-    public Dispatcher(final MemoryManager memoryManager,
-                      final ProcessManager processManager,
-                      final QueueRunner queueRunner,
-                      final FileManager fileManager) {
+    public PseudoOS(final MemoryManager memoryManager,
+                    final ProcessManager processManager,
+                    final QueueRunner queueRunner,
+                    final FileManager fileManager) {
         this.memoryManager = memoryManager;
         this.processManager = processManager;
         this.queueRunner = queueRunner;
@@ -39,7 +39,7 @@ public class Dispatcher {
         final ProcessManager processManager = new ProcessManager();
         final QueueRunner queueRunner = new QueueRunner(processManager);
 
-        final Dispatcher dispatcher = new Dispatcher(
+        final PseudoOS pseudoOS = new PseudoOS(
                 memoryManager,
                 processManager,
                 queueRunner,
@@ -50,9 +50,9 @@ public class Dispatcher {
         final FileSystemInitializationRequest fileSystemInitializationRequest = FileReader.read(files);
 
         fileManager.initialize(fileSystemInitializationRequest);
-        dispatcher.dispatch(processCreationRequestList);
+        pseudoOS.initialize(processCreationRequestList);
     }
-    private void dispatch(final List<ProcessCreationRequest> processCreationRequestList)
+    private void initialize(final List<ProcessCreationRequest> processCreationRequestList)
             throws InterruptedException {
         int time = 0;
 
