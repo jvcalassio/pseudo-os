@@ -2,20 +2,34 @@ import inputreader.file.FileSystemInitializationRequest;
 import files.FileManager;
 import inputreader.file.FileReader;
 import memory.MemoryManager;
+import processes.Process;
 import processes.ProcessCreationRequest;
 import inputreader.process.ProcessReader;
+import processes.ProcessManager;
+import queues.Dispatcher;
+import queues.Scheduler;
 import util.Logger;
 
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 public class PseudoOS {
     private final MemoryManager memoryManager;
     private final FileManager fileManager;
+    private final ProcessManager processManager;
+    private final Dispatcher dispatcher;
+    private final Scheduler scheduler;
 
     public PseudoOS(final MemoryManager memoryManager,
-                    final FileManager fileManager) {
+                    final FileManager fileManager,
+                    final ProcessManager processManager,
+                    final Dispatcher dispatcher,
+                    final Scheduler scheduler) {
         this.memoryManager = memoryManager;
         this.fileManager = fileManager;
+        this.processManager = processManager;
+        this.dispatcher = dispatcher;
+        this.scheduler = scheduler;
     }
 
     public static void main(String[] args) throws InterruptedException {
@@ -29,26 +43,36 @@ public class PseudoOS {
         final MemoryManager memoryManager = new MemoryManager();
         final FileManager fileManager = new FileManager();
 
+        final Semaphore isDispatcherReady = new Semaphore(1);
+        final Dispatcher dispatcher = new Dispatcher(isDispatcherReady);
+        final Scheduler scheduler = new Scheduler(isDispatcherReady, dispatcher);
+        final ProcessManager processManager = new ProcessManager(scheduler);
+
         final PseudoOS pseudoOS = new PseudoOS(
                 memoryManager,
-                fileManager
+                fileManager,
+                processManager,
+                dispatcher,
+                scheduler
         );
 
         final List<ProcessCreationRequest> processInfo = ProcessReader.read(processes);
         final FileSystemInitializationRequest fileInfo = FileReader.read(files);
 
-        // onde colocar fileInfo.getInstructions() ?
-        // pode ser q de pra colocar em
         fileManager.initialize(fileInfo.getTotalBlocks(), fileInfo.getInitialFileSystem(), fileInfo.getInstructions());
         pseudoOS.initialize(processInfo);
     }
     private void initialize(final List<ProcessCreationRequest> processCreationRequestList)
             throws InterruptedException {
         int time = 0;
+        boolean running = true;
 
-        while (!processCreationRequestList.isEmpty()) {
-            final ProcessCreationRequest nextProcess = processCreationRequestList.get(0);
-            if (nextProcess.getStartTime() == time) {
+        processManager.start();
+        scheduler.start();
+
+        while (running) {
+            while(!processCreationRequestList.isEmpty() && processCreationRequestList.get(0).getStartTime() == time) {
+                final ProcessCreationRequest nextProcess = processCreationRequestList.get(0);
                 Logger.debug(nextProcess.toString());
                 // reavaliar como funciona essas filas aqui
                 // enviar pra fila unica, q vai ser processada e reencaminhar pra outras filas internas
@@ -61,12 +85,21 @@ public class PseudoOS {
 //
 //                }
 //                this.queueRunner.run();
+                final int offset = memoryManager.allocateRealTimeBlocks(nextProcess.getBlocks());
+                processManager.readyProcess(new Process(nextProcess, offset));
+
                 processCreationRequestList.remove(0);
+            }
+
+            if (processCreationRequestList.isEmpty()) {
+                running = false;
             }
 
             Thread.sleep(1000);
             time++;
         }
+
+        Logger.debug("Todos os processos foram criados.");
 
         // esperar ate todos os processos finalizarem
         // talvez com um semaforo?

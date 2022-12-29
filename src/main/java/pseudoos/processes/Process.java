@@ -30,7 +30,7 @@ public class Process {
         this.modems = processCreationRequest.hasModems();
         this.drivers = processCreationRequest.hasDrivers();
         this.offset = currentMemoryOffset;
-        this.PC = currentMemoryOffset;
+        this.PC = 0;
 
         this.ready();
     }
@@ -43,11 +43,37 @@ public class Process {
         return priority;
     }
 
-    public void block() {
+    public ProcessStatus getStatus() {
+        return status;
+    }
+
+    protected void block() {
         this.status = ProcessStatus.BLOCKED;
     }
 
-    public void run() { this.status = ProcessStatus.RUNNING; }
+    public void run() {
+        this.status = ProcessStatus.RUNNING;
+
+        while (true) {
+            if (Thread.interrupted()) {
+                this.status = ProcessStatus.READY;
+                break;
+            }
+
+            time -= 0.001;
+
+            if (time <= 0) {
+                Logger.info("P" + PID + " return SIGINT");
+                break;
+            }
+
+            double roundedTime = time.intValue();
+            if (time - roundedTime < 0.001) {
+                PC++;
+                Logger.info("P" + PID + " instruction " + PC);
+            }
+        }
+    }
 
     public void ready() {
         this.status = ProcessStatus.READY;

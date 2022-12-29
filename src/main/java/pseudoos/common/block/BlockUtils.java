@@ -8,7 +8,7 @@ import java.util.stream.IntStream;
 public class BlockUtils {
 
     public static List<Block> generateEmptyBlocks(final int number) {
-        return IntStream.range(0, number).mapToObj(num -> new Block()).collect(Collectors.toList());
+        return IntStream.range(0, number).mapToObj(num -> new Block()).collect(Collectors.toUnmodifiableList());
     }
 
     public static void allocateBlocks(final int start,

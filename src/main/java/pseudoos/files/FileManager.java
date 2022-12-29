@@ -7,17 +7,19 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 public class FileManager {
 
     private int totalBlocks;
     private List<Block> fileSystem;
-    private final Map<String, FileData> fileMap;
+    private final ConcurrentMap<String, FileData> fileMap;
     private List<FileInstruction> instructions;
 
     public FileManager() {
         this.totalBlocks = 0;
-        this.fileMap = new HashMap<>();
+        this.fileMap = new ConcurrentHashMap<>();
         this.instructions = new LinkedList<>();
         this.fileSystem = new LinkedList<>();
     }
