@@ -8,6 +8,7 @@ import inputreader.process.ProcessReader;
 import processes.ProcessManager;
 import queues.Dispatcher;
 import queues.Scheduler;
+import resources.ResourcesManager;
 import util.Logger;
 
 import java.util.List;
@@ -16,17 +17,20 @@ import java.util.concurrent.Semaphore;
 public class PseudoOS {
     private final MemoryManager memoryManager;
     private final FileManager fileManager;
+    private final ResourcesManager resourcesManager;
     private final ProcessManager processManager;
     private final Dispatcher dispatcher;
     private final Scheduler scheduler;
 
     public PseudoOS(final MemoryManager memoryManager,
                     final FileManager fileManager,
+                    final ResourcesManager resourcesManager,
                     final ProcessManager processManager,
                     final Dispatcher dispatcher,
                     final Scheduler scheduler) {
         this.memoryManager = memoryManager;
         this.fileManager = fileManager;
+        this.resourcesManager = resourcesManager;
         this.processManager = processManager;
         this.dispatcher = dispatcher;
         this.scheduler = scheduler;
@@ -40,8 +44,9 @@ public class PseudoOS {
         final String processes = args[0];
         final String files = args[1];
 
-        final MemoryManager memoryManager = new MemoryManager();
+        final MemoryManager memoryManager = MemoryManager.getInstance();
         final FileManager fileManager = new FileManager();
+        final ResourcesManager resourcesManager = new ResourcesManager();
 
         final Semaphore isDispatcherReady = new Semaphore(1);
         final Dispatcher dispatcher = new Dispatcher(isDispatcherReady);
@@ -51,6 +56,7 @@ public class PseudoOS {
         final PseudoOS pseudoOS = new PseudoOS(
                 memoryManager,
                 fileManager,
+                resourcesManager,
                 processManager,
                 dispatcher,
                 scheduler

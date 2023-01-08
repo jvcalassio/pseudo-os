@@ -51,6 +51,14 @@ public class Process {
         this.status = ProcessStatus.BLOCKED;
     }
 
+    public int getOffset() {
+        return offset;
+    }
+
+    public int getBlocks() {
+        return blocks;
+    }
+
     public void run() {
         this.status = ProcessStatus.RUNNING;
 

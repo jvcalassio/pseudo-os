@@ -1,5 +1,6 @@
 package queues;
 
+import memory.MemoryManager;
 import processes.Process;
 import processes.ProcessStatus;
 import util.Logger;
@@ -29,11 +30,13 @@ public class Dispatcher {
             Logger.info("P" + process.getPID() + " started");
             final Thread processRunner = new Thread(process::run);
 
+            // processo de tempo real
             if (process.getPriority() == 0) {
                 // nao pode ser preemptado, espera ate o fim
                 processRunner.start();
                 processRunner.join();
                 Logger.debug("Processo #" + process.getPID() + " finalizado.");
+                MemoryManager.getInstance().freeRealTimeBlocks(process.getOffset(), process.getBlocks());
             } else {
                 // quantum de 1ms
                 processRunner.start();
@@ -45,6 +48,7 @@ public class Dispatcher {
                 } else {
                     Logger.debug("Processo #" + process.getPID() + " finalizado.");
                 }
+                MemoryManager.getInstance().freeUserBlocks(process.getOffset(), process.getBlocks());
             }
         } catch (InterruptedException e) {
             throw new RuntimeException("Dispatcher foi interrompido inesperadamente");
@@ -54,6 +58,4 @@ public class Dispatcher {
 
         return reinsert;
     }
-
-
 }
