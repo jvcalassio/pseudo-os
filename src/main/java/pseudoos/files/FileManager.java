@@ -2,6 +2,8 @@ package files;
 
 import common.block.Block;
 import common.block.BlockUtils;
+import exception.NotEnoughDiskException;
+import util.Logger;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -40,10 +42,32 @@ public class FileManager {
 
     private int allocateDiskBlocks(final int size) {
         // verificar se tem espaco continuo de tamanho SIZE em fileSystem
-        // se tiver, alocar e retornar o numero do bloco em que comeca
-        // se nao tiver, throw new NotEnoughDiskException
-        // lembrandop que precisa verificar usando o first-fit
-        return 0;
+        int firstFreeBlock = -1;
+        int possibleInitialPosition = -1;
+
+        for(Block blk : fileSystem){
+            if(!blk.isUsed()){
+                if(firstFreeBlock == -1){
+                    firstFreeBlock = fileSystem.indexOf(blk);
+                    possibleInitialPosition = firstFreeBlock;
+                }
+                if(fileSystem.indexOf(blk) == possibleInitialPosition + size - 1){
+                    // se tiver, alocar e retornar o numero do bloco em que comeca
+                    for(int i = firstFreeBlock; i < firstFreeBlock + size; i++){
+                        fileSystem.get(i).alloc((int) (Math.random() * 1000));
+                    }
+                    return firstFreeBlock;
+                }
+            }
+        }
+        throw new NotEnoughDiskException();
+    }
+
+    private void freeDiskBlocks(final int startingPosition, final int size) {
+        Logger.info("Liberando espaço em disco nos blocos [" + startingPosition + ":" + (startingPosition + size) + "]");
+        for(int i = startingPosition; i < startingPosition + size; i++){
+            fileSystem.get(i).free();
+        }
     }
 
     public void createFile(final FileCreationRequest fileCreationRequest) {
