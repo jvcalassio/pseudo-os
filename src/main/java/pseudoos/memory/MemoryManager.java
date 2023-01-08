@@ -75,7 +75,7 @@ public class MemoryManager {
                     firstFreeBlock = realTimeBlocks.indexOf(blk);
                     possibleInitialPosition = firstFreeBlock;
                 }
-                if(realTimeBlocks.indexOf(blk) == possibleInitialPosition + size){
+                if(realTimeBlocks.indexOf(blk) == possibleInitialPosition + size - 1){
                     // se tiver, alocar e retornar o numero do bloco em que comeca
                     Logger.info("Alocando memória de usuário no blocos [" + firstFreeBlock + ":" + (firstFreeBlock + size) + "]");
 
