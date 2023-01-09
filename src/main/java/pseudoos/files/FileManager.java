@@ -41,26 +41,7 @@ public class FileManager {
     }
 
     private int allocateDiskBlocks(final int size) {
-        // verificar se tem espaco continuo de tamanho SIZE em fileSystem
-        int firstFreeBlock = -1;
-        int possibleInitialPosition = -1;
-
-        for(Block blk : fileSystem){
-            if(!blk.isUsed()){
-                if(firstFreeBlock == -1){
-                    firstFreeBlock = fileSystem.indexOf(blk);
-                    possibleInitialPosition = firstFreeBlock;
-                }
-                if(fileSystem.indexOf(blk) == possibleInitialPosition + size - 1){
-                    // se tiver, alocar e retornar o numero do bloco em que comeca
-                    for(int i = firstFreeBlock; i < firstFreeBlock + size; i++){
-                        fileSystem.get(i).alloc((int) (Math.random() * 1000));
-                    }
-                    return firstFreeBlock;
-                }
-            }
-        }
-        throw new NotEnoughDiskException();
+        return BlockUtils.firstFit(this.fileSystem, size);
     }
 
     private void freeDiskBlocks(final int startingPosition, final int size) {

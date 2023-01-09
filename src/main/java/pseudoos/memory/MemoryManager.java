@@ -32,63 +32,13 @@ public class MemoryManager {
         return memory.subList(64, 1024);
     }
 
-    // escolher qual algoritmo adotar aqui pras alocacoes: first-first? best-fit?
+
     public int allocateRealTimeBlocks(final int size) {
-        // verificar se tem espaco continuo de tamanho SIZE em getRealTimeBlocks()
-        List<Block> realTimeBlocks = getRealTimeBlocks();
-
-        int firstFreeBlock = -1;
-        int possibleInitialPosition = -1;
-
-        for(Block blk : realTimeBlocks){
-            if(!blk.isUsed()){
-                if(firstFreeBlock == -1){
-                    firstFreeBlock = realTimeBlocks.indexOf(blk);
-                    possibleInitialPosition = firstFreeBlock;
-                }
-                if(realTimeBlocks.indexOf(blk) == possibleInitialPosition + size - 1){
-                    // se tiver, alocar e retornar o numero do bloco em que comeca
-                    Logger.info("Alocando memória real-time no blocos [" + firstFreeBlock + ":" + (firstFreeBlock + size) + "]");
-
-                    for(int i = firstFreeBlock; i < firstFreeBlock + size; i++){
-                        getRealTimeBlocks().get(i).alloc((int) (Math.random() * 1000));
-                    }
-
-                    return firstFreeBlock;
-                }
-            }
-        }
-        Logger.info("Não há memória real-time suficiente para alocar " + size + " blocos");
-        throw new NotEnoughMemoryException();
+        return BlockUtils.firstFit(getRealTimeBlocks(), size);
     }
 
     public int allocateUserBlocks(final int size) {
-        // verificar se tem espaco continuo de tamanho SIZE em getRealTimeBlocks()
-        List<Block> realTimeBlocks = getUserBlocks();
-
-        int firstFreeBlock = -1;
-        int possibleInitialPosition = -1;
-
-        for(Block blk : realTimeBlocks){
-            if(!blk.isUsed()){
-                if(firstFreeBlock == -1){
-                    firstFreeBlock = realTimeBlocks.indexOf(blk);
-                    possibleInitialPosition = firstFreeBlock;
-                }
-                if(realTimeBlocks.indexOf(blk) == possibleInitialPosition + size - 1){
-                    // se tiver, alocar e retornar o numero do bloco em que comeca
-                    Logger.info("Alocando memória de usuário no blocos [" + firstFreeBlock + ":" + (firstFreeBlock + size) + "]");
-
-                    for(int i = firstFreeBlock; i < firstFreeBlock + size; i++){
-                        getUserBlocks().get(i).alloc((int) (Math.random() * 1000));
-                    }
-
-                    return firstFreeBlock;
-                }
-            }
-        }
-        Logger.info("Não há memória de usuário suficiente para alocar " + size + " blocos");
-        throw new NotEnoughMemoryException();
+        return BlockUtils.firstFit(getUserBlocks(), size);
     }
 
     public void freeRealTimeBlocks(final int initialBlock, final int size) {
