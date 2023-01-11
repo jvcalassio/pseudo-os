@@ -45,8 +45,8 @@ public class PseudoOS {
         final String files = args[1];
 
         final MemoryManager memoryManager = MemoryManager.getInstance();
+        final ResourcesManager resourcesManager = ResourcesManager.getInstance();
         final FileManager fileManager = new FileManager();
-        final ResourcesManager resourcesManager = new ResourcesManager();
 
         final Semaphore isDispatcherReady = new Semaphore(1);
         final Dispatcher dispatcher = new Dispatcher(isDispatcherReady);

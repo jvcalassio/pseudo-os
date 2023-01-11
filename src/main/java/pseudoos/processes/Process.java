@@ -1,5 +1,6 @@
 package processes;
 
+import resources.ResourcesManager;
 import util.Logger;
 
 public class Process {
@@ -61,6 +62,7 @@ public class Process {
 
     public void run() {
         this.status = ProcessStatus.RUNNING;
+        requestResources();
 
         while (true) {
             if (Thread.interrupted()) {
@@ -72,6 +74,7 @@ public class Process {
 
             if (time <= 0) {
                 Logger.info("P" + PID + " return SIGINT");
+                refoundResources();
                 break;
             }
 
@@ -85,6 +88,70 @@ public class Process {
 
     public void ready() {
         this.status = ProcessStatus.READY;
+    }
+
+    private void requestResources() {
+        ResourcesManager resourcesManager = ResourcesManager.getInstance();
+        if(this.scanners){
+            try {
+                Logger.info("Alocando scanner para o processo: " + PID);
+                resourcesManager.getScanner().getSemaphore().acquire();
+                resourcesManager.requestScanner(PID);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        if(this.printers){
+            try {
+                Logger.info("Alocando impressora para o processo: " + PID);
+                resourcesManager.getPrinter().getSemaphore().acquire();
+                resourcesManager.requestPrinter(PID);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        if(this.modems){
+            try {
+                Logger.info("Alocando modem para o processo: " + PID);
+                resourcesManager.getModem().getSemaphore().acquire();
+                resourcesManager.requestModem(PID);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        if(this.drivers){
+            try {
+                Logger.info("Alocando sata para o processo: " + PID);
+                resourcesManager.getSata().getSemaphore().acquire();
+                resourcesManager.requestSata(PID);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void refoundResources(){
+        ResourcesManager resourcesManager = ResourcesManager.getInstance();
+        if(this.scanners){
+            Logger.info("Liberando scanner do processo: " + PID);
+            resourcesManager.getScanner().getSemaphore().release();
+            resourcesManager.refoundScanner(PID);
+        }
+        if(this.printers){
+            Logger.info("Liberando impressora do processo: " + PID);
+            resourcesManager.getPrinter().getSemaphore().release();
+            resourcesManager.refoundPrinter(PID);
+        }
+        if(this.modems){
+            Logger.info("Liberando modem do processo: " + PID);
+            resourcesManager.getModem().getSemaphore().release();
+            resourcesManager.refoundModem(PID);
+        }
+        if(this.drivers){
+            Logger.info("Liberando sata do processo: " + PID);
+            resourcesManager.getSata().getSemaphore().release();
+            resourcesManager.refoundSata(PID);
+        }
     }
 
     @Override

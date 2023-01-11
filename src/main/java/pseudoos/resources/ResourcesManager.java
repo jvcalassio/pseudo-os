@@ -2,70 +2,114 @@ package resources;
 
 import exception.InsufficientResources;
 
+import java.util.concurrent.Semaphore;
+
 // Gerenciador de resursos do pseudoOS.
 public class ResourcesManager {
 
-    private int scanner;
+    private static ResourcesManager instance;
 
-    private int printer;
+    // Quantidade disponivel - PID do processo que esta usando
+    private final Resource scanner;
 
-    private int modem;
+    private final Resource printer;
 
-    private int sata;
+    private final Resource modem;
+
+    private final Resource sata;
+
+    public static ResourcesManager getInstance() {
+        if (instance == null) {
+            instance = new ResourcesManager();
+        }
+        return instance;
+    }
 
     // Inicializa os recursos com os valores definidos na especificacao.
     public ResourcesManager() {
-        scanner = 1;
-        printer = 2;
-        modem = 1;
-        sata = 2;
+        this.scanner = new Resource(1);
+        this.printer = new Resource(2);
+        this.modem = new Resource(1);
+        this.sata = new Resource(2);
     }
 
-    public boolean requestScanner() {
-        if (scanner > 0) {
-            scanner--;
+    public boolean requestScanner(int PID){
+        if(scanner.getQuantity() > 0){
+            scanner.setQuantity(scanner.getQuantity() - 1);
+            scanner.addPID(PID);
             return true;
         }
-        throw new InsufficientResources();
+        throw new InsufficientResources("Scanner");
     }
 
-    public boolean requestPrinter() {
-        if (printer > 0) {
-            printer--;
+    public boolean requestPrinter(int PID){
+        if(printer.getQuantity() > 0){
+            printer.setQuantity(printer.getQuantity() - 1);
+            printer.addPID(PID);
             return true;
         }
-        throw new InsufficientResources();
+        throw new InsufficientResources("Printer");
     }
 
-    public boolean requestModem() {
-        if (modem > 0) {
-            modem--;
+    public boolean requestModem(int PID){
+        if(modem.getQuantity() > 0){
+            modem.setQuantity(modem.getQuantity() - 1);
+            modem.addPID(PID);
             return true;
         }
-        throw new InsufficientResources();
+        throw new InsufficientResources("Modem");
     }
 
-    public boolean requestSata() {
-        if (sata > 0) {
-            sata--;
+    public boolean requestSata(int PID){
+        if(sata.getQuantity() > 0){
+            sata.setQuantity(sata.getQuantity() - 1);
+            sata.addPID(PID);
             return true;
         }
-        throw new InsufficientResources();
+        throw new InsufficientResources("SATA");
     }
 
-    public void refundScanner() {
-        scanner++;
+    public void refoundScanner(int PID){
+        if(scanner.getPIDs().contains(PID)){
+            scanner.setQuantity(scanner.getQuantity() + 1);
+            scanner.removePID(PID);
+        }
     }
 
-    public void refundPrinter() {
-        printer++;
+    public void refoundPrinter(int PID){
+        if(printer.getPIDs().contains(PID)){
+            printer.setQuantity(printer.getQuantity() + 1);
+            printer.removePID(PID);
+        }
     }
 
-    public void refundModem() {
-        modem++;
+    public void refoundModem(int PID){
+        if(modem.getPIDs().contains(PID)){
+            modem.setQuantity(modem.getQuantity() + 1);
+            modem.removePID(PID);
+        }
     }
 
-    public void refundSata() {
-        sata++;
+    public void refoundSata(int PID){
+        if(sata.getPIDs().contains(PID)){
+            sata.setQuantity(sata.getQuantity() + 1);
+            sata.removePID(PID);
+        }
+    }
+
+    public Resource getScanner() {
+        return scanner;
+    }
+
+    public Resource getPrinter() {
+        return printer;
+    }
+
+    public Resource getModem() {
+        return modem;
+    }
+
+    public Resource getSata() {
+        return sata;
     }
 }

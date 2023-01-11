@@ -2,7 +2,6 @@ package memory;
 
 import common.block.Block;
 import common.block.BlockUtils;
-import exception.NotEnoughMemoryException;
 import util.Logger;
 
 import java.util.List;

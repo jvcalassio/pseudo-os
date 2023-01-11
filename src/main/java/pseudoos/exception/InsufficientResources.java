@@ -2,7 +2,7 @@ package exception;
 
 public class InsufficientResources extends RuntimeException {
 
-    public InsufficientResources() {
-        super("Recursos insuficientes.");
+    public InsufficientResources(String resource) {
+        super("Recursos insuficientes: " + resource);
     }
 }
