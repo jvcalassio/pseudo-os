@@ -33,11 +33,11 @@ public class MemoryManager {
 
 
     public int allocateRealTimeBlocks(final int size) {
-        return BlockUtils.firstFit(getRealTimeBlocks(), size);
+        return BlockUtils.firstFit(getRealTimeBlocks(), size, getRealTimeBlocks());
     }
 
     public int allocateUserBlocks(final int size) {
-        return BlockUtils.firstFit(getUserBlocks(), size);
+        return BlockUtils.firstFit(getUserBlocks(), size, getUserBlocks());
     }
 
     public void freeRealTimeBlocks(final int initialBlock, final int size) {

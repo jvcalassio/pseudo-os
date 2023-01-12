@@ -38,7 +38,7 @@ public class FileManager {
     }
 
     private int allocateDiskBlocks(final int size) {
-        return BlockUtils.firstFit(this.fileSystem, size);
+        return BlockUtils.firstFit(this.fileSystem, size, fileSystem);
     }
 
     private void freeDiskBlocks(final int startingPosition, final int size) {

@@ -22,7 +22,7 @@ public class BlockUtils {
         targetBlockList.subList(start, end).forEach(block -> block.alloc(random.nextInt()));
     }
 
-    public static int firstFit(List<Block> blockList, int size){
+    public static int firstFit(List<Block> blockList, int size, List<Block> targetBlockList) {
         // verificar se tem espaco continuo de tamanho SIZE em getRealTimeBlocks()
         int firstFreeBlock = -1;
         int possibleInitialPosition = -1;
@@ -38,7 +38,7 @@ public class BlockUtils {
                     Logger.info("Alocando memória real-time no blocos [" + firstFreeBlock + ":" + (firstFreeBlock + size) + "]");
 
                     for(int i = firstFreeBlock; i < firstFreeBlock + size; i++){
-                        MemoryManager.getInstance().getRealTimeBlocks().get(i).alloc((int) (Math.random() * 1000));
+                        targetBlockList.get(i).alloc((int) (Math.random() * 1000));
                     }
 
                     return firstFreeBlock;
