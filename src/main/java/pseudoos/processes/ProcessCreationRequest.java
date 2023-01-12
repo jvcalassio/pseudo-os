@@ -9,7 +9,7 @@ public class ProcessCreationRequest {
     private final boolean printers;
     private final boolean scanners;
     private final boolean modems;
-    private final boolean drivers;
+    private final boolean satas;
 
     public ProcessCreationRequest(int startTime,
                                   int priority,
@@ -18,7 +18,7 @@ public class ProcessCreationRequest {
                                   boolean printers,
                                   boolean scanners,
                                   boolean modems,
-                                  boolean drivers) {
+                                  boolean satas) {
         this.startTime = startTime;
         this.priority = priority;
         this.cpuTime = cpuTime;
@@ -26,7 +26,7 @@ public class ProcessCreationRequest {
         this.printers = printers;
         this.scanners = scanners;
         this.modems = modems;
-        this.drivers = drivers;
+        this.satas = satas;
     }
 
     public Integer getStartTime() {
@@ -57,8 +57,8 @@ public class ProcessCreationRequest {
         return modems;
     }
 
-    public boolean hasDrivers() {
-        return drivers;
+    public boolean hasSatas() {
+        return satas;
     }
 
     @Override
@@ -71,7 +71,7 @@ public class ProcessCreationRequest {
                 ", printers=" + printers +
                 ", scanners=" + scanners +
                 ", modems=" + modems +
-                ", drivers=" + drivers +
+                ", satas=" + satas +
                 '}';
     }
 }

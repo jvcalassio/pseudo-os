@@ -36,7 +36,7 @@ public class ProcessReader {
         final boolean printers = Integer.parseInt(splitLine.get(4)) == 1;
         final boolean scanners = Integer.parseInt(splitLine.get(5)) == 1;
         final boolean modems = Integer.parseInt(splitLine.get(6)) == 1;
-        final boolean drivers = Integer.parseInt(splitLine.get(7)) == 1;
+        final boolean satas = Integer.parseInt(splitLine.get(7)) == 1;
 
         return new ProcessCreationRequest(
                 startTime,
@@ -46,7 +46,7 @@ public class ProcessReader {
                 printers,
                 scanners,
                 modems,
-                drivers
+                satas
         );
     }
 

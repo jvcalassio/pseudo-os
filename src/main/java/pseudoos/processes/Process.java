@@ -14,7 +14,7 @@ public class Process {
     private final boolean printers;
     private final boolean scanners;
     private final boolean modems;
-    private final boolean drivers;
+    private final boolean sata;
     private ProcessStatus status;
     private int PC;
 
@@ -29,7 +29,7 @@ public class Process {
         this.printers = processCreationRequest.hasPrinters();
         this.scanners = processCreationRequest.hasScanners();
         this.modems = processCreationRequest.hasModems();
-        this.drivers = processCreationRequest.hasDrivers();
+        this.sata = processCreationRequest.hasSatas();
         this.offset = currentMemoryOffset;
         this.PC = 0;
 
@@ -90,42 +90,62 @@ public class Process {
         this.status = ProcessStatus.READY;
     }
 
+    public void blocked() {
+        this.status = ProcessStatus.BLOCKED;
+    }
+
     private void requestResources() {
         ResourcesManager resourcesManager = ResourcesManager.getInstance();
         if(this.scanners){
-            try {
-                Logger.info("Alocando scanner para o processo: " + PID);
-                resourcesManager.getScanner().getSemaphore().acquire();
+            Logger.info("Alocando scanner para o processo: " + PID);
+            if(resourcesManager.getScanner().getSemaphore().tryAcquire()){
                 resourcesManager.requestScanner(PID);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            }else{
+                blocked();
+                try {
+                    resourcesManager.getScanner().getSemaphore().acquire();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
         if(this.printers){
-            try {
-                Logger.info("Alocando impressora para o processo: " + PID);
-                resourcesManager.getPrinter().getSemaphore().acquire();
+            Logger.info("Alocando impressora para o processo: " + PID);
+            if(resourcesManager.getPrinter().getSemaphore().tryAcquire()){
                 resourcesManager.requestPrinter(PID);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            }else{
+                blocked();
+                try {
+                    resourcesManager.getPrinter().getSemaphore().acquire();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
         if(this.modems){
-            try {
-                Logger.info("Alocando modem para o processo: " + PID);
-                resourcesManager.getModem().getSemaphore().acquire();
+            Logger.info("Alocando modem para o processo: " + PID);
+            if(resourcesManager.getModem().getSemaphore().tryAcquire()){
                 resourcesManager.requestModem(PID);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            }else{
+                blocked();
+                try {
+                    resourcesManager.getModem().getSemaphore().acquire();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
-        if(this.drivers){
-            try {
-                Logger.info("Alocando sata para o processo: " + PID);
-                resourcesManager.getSata().getSemaphore().acquire();
+        if(this.sata){
+            Logger.info("Alocando sata para o processo: " + PID);
+            if(resourcesManager.getSata().getSemaphore().tryAcquire()){
                 resourcesManager.requestSata(PID);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            }else{
+                blocked();
+                try {
+                    resourcesManager.getSata().getSemaphore().acquire();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
@@ -147,7 +167,7 @@ public class Process {
             resourcesManager.getModem().getSemaphore().release();
             resourcesManager.refoundModem(PID);
         }
-        if(this.drivers){
+        if(this.sata){
             Logger.info("Liberando sata do processo: " + PID);
             resourcesManager.getSata().getSemaphore().release();
             resourcesManager.refoundSata(PID);
@@ -165,7 +185,7 @@ public class Process {
                 ", printers=" + printers +
                 ", scanners=" + scanners +
                 ", modems=" + modems +
-                ", drivers=" + drivers +
+                ", sata=" + sata +
                 ", status=" + status +
                 ", PC=" + PC +
                 '}';
