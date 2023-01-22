@@ -11,6 +11,7 @@ import java.util.concurrent.Semaphore;
 
 public class Scheduler {
 
+    private static Scheduler instance;
     private boolean running;
     private final Queue<Process> realTimeProcesses;
     private final PriorityBlockingQueue<Process> userProcessesHigh;
@@ -21,15 +22,24 @@ public class Scheduler {
     private final Semaphore isDispatcherReady;
     private final Dispatcher dispatcher;
 
-    public Scheduler(final Semaphore isDispatcherReady, final Dispatcher dispatcher) {
+    public static Scheduler getInstance() {
+        if (instance == null) {
+            instance = new Scheduler();
+        }
+        return instance;
+    }
+
+
+    private Scheduler() {
         this.realTimeProcesses = new ConcurrentLinkedQueue<>();
-        this.userProcessesHigh = new PriorityBlockingQueue<>(1000, Comparator.comparing(Process::getPriority));
-        this.userProcessesMedium = new PriorityBlockingQueue<>(1000, Comparator.comparing(Process::getPriority));
-        this.userProcessesLow = new PriorityBlockingQueue<>(1000, Comparator.comparing(Process::getPriority));
+        this.userProcessesHigh = new PriorityBlockingQueue<>(1000, Comparator.comparing(Process::getProcessPriority));
+        this.userProcessesMedium = new PriorityBlockingQueue<>(1000, Comparator.comparing(Process::getProcessPriority));
+        this.userProcessesLow = new PriorityBlockingQueue<>(1000, Comparator.comparing(Process::getProcessPriority));
         this.running = false;
         this.schedulerThread = createSchedulerThread();
-        this.isDispatcherReady = isDispatcherReady;
-        this.dispatcher = dispatcher;
+
+        this.isDispatcherReady = new Semaphore(1);
+        this.dispatcher = new Dispatcher(this.isDispatcherReady);
     }
 
     private Thread createSchedulerThread() {
@@ -59,10 +69,11 @@ public class Scheduler {
                      * enviar o processo removido pro dispatcher
                      */
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    running = false;
+                    Logger.debug("Scheduler finalizado.");
                 }
             }
-        });
+        }, "Scheduler");
     }
 
     private void dispatchUserProcess(final PriorityBlockingQueue<Process> queue) {
@@ -84,8 +95,8 @@ public class Scheduler {
 
     public void stop() {
         if (running) {
-            running = false;
-            Logger.debug("Finalizado ProcessManager");
+            Logger.debug("Finalizado Scheduler");
+            schedulerThread.interrupt();
         }
     }
 
@@ -94,9 +105,9 @@ public class Scheduler {
     }
 
     public void addUserProcess(final Process process) {
-        if (process.getPriority() == 1) {
+        if (process.getProcessPriority() == 1) {
             userProcessesHigh.add(process);
-        } else if (process.getPriority() == 2) {
+        } else if (process.getProcessPriority() == 2) {
             userProcessesMedium.add(process);
         } else {
             userProcessesLow.add(process);

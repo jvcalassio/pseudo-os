@@ -3,7 +3,7 @@ package processes;
 import resources.ResourcesManager;
 import util.Logger;
 
-public class Process {
+public class Process extends Thread {
 
     public static int processCounter = 0;
     private final Integer PID;
@@ -20,6 +20,7 @@ public class Process {
 
     public Process(final ProcessCreationRequest processCreationRequest,
                    final int currentMemoryOffset) {
+        super("Process-" + processCounter);
         this.PID = processCounter;
         processCounter++;
 
@@ -40,7 +41,7 @@ public class Process {
         return PID;
     }
 
-    public Integer getPriority() {
+    public Integer getProcessPriority() {
         return priority;
     }
 

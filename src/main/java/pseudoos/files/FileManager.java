@@ -11,12 +11,20 @@ import java.util.concurrent.ConcurrentMap;
 
 public class FileManager {
 
+    private static FileManager instance;
     private int totalBlocks;
     private List<Block> fileSystem;
     private final ConcurrentMap<String, FileData> fileMap;
     private List<FileInstruction> instructions;
 
-    public FileManager() {
+    public static FileManager getInstance() {
+        if (instance == null) {
+            instance = new FileManager();
+        }
+        return instance;
+    }
+
+    private FileManager() {
         this.totalBlocks = 0;
         this.fileMap = new ConcurrentHashMap<>();
         this.instructions = new LinkedList<>();
