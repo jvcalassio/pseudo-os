@@ -25,27 +25,42 @@ public class Dispatcher {
         boolean reinsert = false;
         try {
             if (process.getStatus() != ProcessStatus.READY) {
-                throw new RuntimeException("Processo #" + process.getPID() + " nao estava pronto para execucao");
+                Logger.debug("Processo #" + process.getPID() + " nao estava pronto para execucao. Status: "
+                        + process.getStatus());
+                isDispatcherReady.release();
+                return true;
             }
+
+            final Thread processRunner = new Thread(process::run);
 
             Logger.info("P" + process.getPID() + " started");
 
             // processo de tempo real
             if (process.getProcessPriority() == 0) {
                 // nao pode ser preemptado, espera ate o fim
-                process.start();
-                process.join();
+                processRunner.start();
+                processRunner.join();
                 ProcessManager.getInstance().finishProcess(process);
             } else {
-                // quantum de 1ms
-                process.start();
-                process.join(1);
-                if (process.isAlive()) {
-                    process.interrupt();
-                    Logger.debug("Processo #" + process.getPID() + " interrompido pelo OS.");
+                processRunner.start();
+                process.waitUntilRunningOrBlocked();
+
+                if (process.getStatus() == ProcessStatus.BLOCKED) {
+                    Logger.debug("Processo #" + process.getPID() + " em estado de bloqueio.");
                     reinsert = true;
                 } else {
-                    ProcessManager.getInstance().finishProcess(process);
+                    // quantum de 1ms
+                    processRunner.join(1);
+                    if (processRunner.isAlive()) {
+                        processRunner.interrupt();
+                        process.ready();
+                        process.waitUntilReady();
+
+                        Logger.debug("Processo #" + process.getPID() + " interrompido pelo OS.");
+                        reinsert = true;
+                    } else {
+                        ProcessManager.getInstance().finishProcess(process);
+                    }
                 }
             }
         } catch (InterruptedException e) {

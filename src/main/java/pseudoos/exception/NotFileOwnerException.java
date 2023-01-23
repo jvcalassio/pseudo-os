@@ -2,7 +2,7 @@ package exception;
 
 public class NotFileOwnerException extends RuntimeException {
 
-    public NotFileOwnerException() {
-        super("Processo nao eh dono do arquivo.");
+    public NotFileOwnerException(String fileName, Integer PID) {
+        super("Processo " + PID + " nao eh dono do arquivo " + fileName + ".");
     }
 }

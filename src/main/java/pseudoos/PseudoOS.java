@@ -1,3 +1,4 @@
+import exception.NotEnoughMemoryException;
 import files.FileManager;
 import inputreader.file.FileReader;
 import inputreader.file.FileSystemInitializationRequest;
@@ -33,6 +34,8 @@ public class PseudoOS {
                 fileInfo.getTotalBlocks(), fileInfo.getInitialFileSystem(), fileInfo.getInstructions()
         );
         pseudoOS.initialize(processInfo);
+
+        FileManager.getInstance().printAllocationMap();
     }
     private void initialize(final List<ProcessCreationRequest> processCreationRequestList)
             throws InterruptedException {
@@ -48,13 +51,12 @@ public class PseudoOS {
                 final ProcessCreationRequest nextProcess = processCreationRequestList.get(0);
                 Logger.debug(nextProcess.toString());
 
-                int offset;
-                if (nextProcess.getPriority() == 0) {
-                    offset = MemoryManager.getInstance().allocateRealTimeBlocks(nextProcess.getBlocks());
-                } else {
-                    offset = MemoryManager.getInstance().allocateUserBlocks(nextProcess.getBlocks());
+                try {
+                    ProcessManager.getInstance().createProcess(nextProcess);
+                } catch (NotEnoughMemoryException e) {
+                    Logger.info(e.getMessage());
+                    processCount--;
                 }
-                ProcessManager.getInstance().readyProcess(new Process(nextProcess, offset));
 
                 processCreationRequestList.remove(0);
             }
@@ -68,10 +70,8 @@ public class PseudoOS {
         }
 
         Logger.debug("Todos os processos foram criados.");
-
         ProcessManager.getInstance().getFinishedProcesses().acquire(processCount);
-
-        Logger.debug("Cabo tudo");
+        Logger.debug("Todos os processos foram finalizados.");
 
         ProcessManager.getInstance().stop();
         Scheduler.getInstance().stop();

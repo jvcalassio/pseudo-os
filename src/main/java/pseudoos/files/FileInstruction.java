@@ -23,4 +23,19 @@ public class FileInstruction {
         this.fileSize = null;
     }
 
+    public int getPID() {
+        return PID;
+    }
+
+    public FileOperation getOperation() {
+        return operation;
+    }
+
+    public String getFileName() {
+        return fileName;
+    }
+
+    public Integer getFileSize() {
+        return fileSize;
+    }
 }

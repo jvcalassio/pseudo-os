@@ -2,6 +2,7 @@ package memory;
 
 import common.block.Block;
 import common.block.BlockUtils;
+import exception.NotEnoughMemoryException;
 import util.Logger;
 
 import java.util.List;
@@ -33,11 +34,11 @@ public class MemoryManager {
 
 
     public int allocateRealTimeBlocks(final int size) {
-        return BlockUtils.firstFit(getRealTimeBlocks(), size, getRealTimeBlocks());
+        return BlockUtils.firstFit(getRealTimeBlocks(), size).orElseThrow(NotEnoughMemoryException::new);
     }
 
     public int allocateUserBlocks(final int size) {
-        return BlockUtils.firstFit(getUserBlocks(), size, getUserBlocks());
+        return BlockUtils.firstFit(getUserBlocks(), size).orElseThrow(NotEnoughMemoryException::new);
     }
 
     public void freeRealTimeBlocks(final int initialBlock, final int size) {

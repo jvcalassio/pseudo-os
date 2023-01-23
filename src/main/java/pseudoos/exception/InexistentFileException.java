@@ -2,7 +2,7 @@ package exception;
 
 public class InexistentFileException extends RuntimeException {
 
-    public InexistentFileException() {
-        super("Arquivo inexistente.");
+    public InexistentFileException(String fileName) {
+        super("Arquivo " + fileName + " inexistente.");
     }
 }

@@ -1,6 +1,8 @@
 package queues;
 
 import processes.Process;
+import processes.ProcessManager;
+import processes.ProcessStatus;
 import util.Logger;
 
 import java.util.Comparator;
@@ -78,10 +80,14 @@ public class Scheduler {
 
     private void dispatchUserProcess(final PriorityBlockingQueue<Process> queue) {
         final Process currentProcess = queue.remove();
-        final boolean reinsert = dispatcher.dispatch(currentProcess);
-        if (reinsert) {
-            addUserProcess(currentProcess);
-            Logger.debug("Reinserindo processo #" + currentProcess.getPID());
+        if (currentProcess.getStatus() != ProcessStatus.BLOCKED) {
+            final boolean reinsert = dispatcher.dispatch(currentProcess);
+            if (reinsert) {
+                addUserProcess(currentProcess);
+                Logger.debug("Reinserindo processo #" + currentProcess.getPID());
+            }
+        } else {
+            ProcessManager.getInstance().addBlockedProcess(currentProcess);
         }
     }
 

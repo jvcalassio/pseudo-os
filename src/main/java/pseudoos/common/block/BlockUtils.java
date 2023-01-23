@@ -5,6 +5,7 @@ import memory.MemoryManager;
 import util.Logger;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -22,8 +23,14 @@ public class BlockUtils {
         targetBlockList.subList(start, end).forEach(block -> block.alloc(random.nextInt()));
     }
 
-    public static int firstFit(List<Block> blockList, int size, List<Block> targetBlockList) {
-        // verificar se tem espaco continuo de tamanho SIZE em getRealTimeBlocks()
+    public static void freeBlocks(final int start,
+                                  final int end,
+                                  final List<Block> targetBlockList) {
+        targetBlockList.subList(start, end).forEach(Block::free);
+    }
+
+    public static Optional<Integer> firstFit(List<Block> blockList, int size) {
+        // verificar se tem espaco continuo de tamanho SIZE na lista recebida
         int firstFreeBlock = -1;
         int possibleInitialPosition = -1;
 
@@ -35,18 +42,15 @@ public class BlockUtils {
                 }
                 if(blockList.indexOf(blk) == possibleInitialPosition + size - 1){
                     // se tiver, alocar e retornar o numero do bloco em que comeca
-                    Logger.info("Alocando memória real-time no blocos [" + firstFreeBlock + ":" + (firstFreeBlock + size) + "]");
-
                     for(int i = firstFreeBlock; i < firstFreeBlock + size; i++){
-                        targetBlockList.get(i).alloc((int) (Math.random() * 1000));
+                        blockList.get(i).alloc((int) (Math.random() * 1000));
                     }
 
-                    return firstFreeBlock;
+                    return Optional.of(firstFreeBlock);
                 }
             }
         }
-        Logger.info("Não há memória real-time suficiente para alocar " + size + " blocos");
-        throw new NotEnoughMemoryException();
+        return Optional.empty();
     }
 
 }

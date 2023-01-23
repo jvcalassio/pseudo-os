@@ -1,6 +1,7 @@
 package resources;
 
 import exception.InsufficientResources;
+import util.Logger;
 
 import java.util.concurrent.Semaphore;
 
@@ -37,6 +38,7 @@ public class ResourcesManager {
         if(scanner.getQuantity() > 0){
             scanner.setQuantity(scanner.getQuantity() - 1);
             scanner.addPID(PID);
+            Logger.debug("Scanner alocado para o processo " + PID);
             return true;
         }
         throw new InsufficientResources("Scanner");
@@ -46,6 +48,7 @@ public class ResourcesManager {
         if(printer.getQuantity() > 0){
             printer.setQuantity(printer.getQuantity() - 1);
             printer.addPID(PID);
+            Logger.debug("Impressora alocado para o processo " + PID);
             return true;
         }
         throw new InsufficientResources("Printer");
@@ -55,6 +58,7 @@ public class ResourcesManager {
         if(modem.getQuantity() > 0){
             modem.setQuantity(modem.getQuantity() - 1);
             modem.addPID(PID);
+            Logger.debug("Modem alocado para o processo " + PID);
             return true;
         }
         throw new InsufficientResources("Modem");
@@ -64,6 +68,7 @@ public class ResourcesManager {
         if(sata.getQuantity() > 0){
             sata.setQuantity(sata.getQuantity() - 1);
             sata.addPID(PID);
+            Logger.debug("SATA alocado para o processo " + PID);
             return true;
         }
         throw new InsufficientResources("SATA");

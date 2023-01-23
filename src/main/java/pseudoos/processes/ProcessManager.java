@@ -1,20 +1,26 @@
 package processes;
 
+import exception.NotEnoughMemoryException;
+import exception.NotFileOwnerException;
 import memory.MemoryManager;
 import queues.Scheduler;
 import util.Logger;
 
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.Semaphore;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.*;
 
 public class ProcessManager {
 
     private static ProcessManager instance;
     private boolean running;
+    private final ConcurrentMap<Integer, Process> processList;
     private final BlockingQueue<Process> readyProcesses;
     private final BlockingQueue<Process> blockedProcesses;
     private final Thread readyRunner;
+    private final Thread monitorRunner;
     private final Semaphore finishedProcesses;
 
     public static ProcessManager getInstance() {
@@ -29,19 +35,43 @@ public class ProcessManager {
         this.blockedProcesses = new LinkedBlockingQueue<>(1000);
         this.running = false;
         this.readyRunner = createReadyRunnerThread();
+        this.monitorRunner = createProcessMonitor();
+        this.processList = new ConcurrentHashMap<>();
         this.finishedProcesses = new Semaphore(0);
     }
 
+
+    public void createProcess(final ProcessCreationRequest creationRequest) {
+        try {
+            int offset;
+            if (creationRequest.getPriority() == 0) {
+                offset = MemoryManager.getInstance().allocateRealTimeBlocks(creationRequest.getBlocks());
+            } else {
+                offset = MemoryManager.getInstance().allocateUserBlocks(creationRequest.getBlocks());
+            }
+            final Process createdProcess = new Process(creationRequest, offset);
+
+            if (!processList.containsKey(createdProcess.getPID())) {
+                processList.put(createdProcess.getPID(), createdProcess);
+            }
+            readyProcess(createdProcess);
+        } catch (NotEnoughMemoryException e) {
+            final Process createdProcess = new Process(creationRequest, 0);
+            createdProcess.finished();
+            if (!processList.containsKey(createdProcess.getPID())) {
+                processList.put(createdProcess.getPID(), createdProcess);
+            }
+            throw new NotEnoughMemoryException(createdProcess.getPID(), e);
+        }
+    }
     public void readyProcess(final Process process) {
         process.ready();
         readyProcesses.add(process);
         Logger.debug("Processo #" + process.getPID() + " pronto.");
     }
 
-    public void blockProcess(final Process process) {
-        process.block();
+    public void addBlockedProcess(final Process process) {
         blockedProcesses.add(process);
-        Logger.debug("Processo #" + process.getPID() + " bloqueado.");
     }
 
     public void finishProcess(final Process process) {
@@ -50,12 +80,17 @@ public class ProcessManager {
         } else {
             MemoryManager.getInstance().freeUserBlocks(process.getOffset(), process.getBlocks());
         }
+        process.finished();
         Logger.debug("Processo #" + process.getPID() + " finalizado.");
         this.finishedProcesses.release();
     }
 
     public Semaphore getFinishedProcesses() {
         return finishedProcesses;
+    }
+
+    public ConcurrentMap<Integer, Process> getProcessList() {
+        return processList;
     }
 
     public Thread createReadyRunnerThread() {
@@ -77,10 +112,44 @@ public class ProcessManager {
         }, "ProcessManager");
     }
 
+    public Thread createProcessMonitor() {
+        return new Thread(() -> {
+            BufferedWriter fileWriter;
+            try {
+                fileWriter = new BufferedWriter(new FileWriter("out.txt"));
+            } catch (IOException e) {
+                throw new RuntimeException("Erro ao criar output do ProcessMonitor");
+            }
+            while (running) {
+                try {
+                    if (processList.isEmpty()) {
+                        continue;
+                    }
+                    String output = "";
+                    for (Map.Entry<Integer, Process> item : processList.entrySet()) {
+                        output += item.getKey() + "-" + item.getValue().getStatus() + ", ";
+                    }
+                    fileWriter.append(output).append("\n");
+                    Thread.sleep(1);
+                } catch (InterruptedException | IOException e) {
+                    running = false;
+                    Logger.debug("ProcessMonitor finalizado.");
+                }
+            }
+
+            try {
+                fileWriter.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }, "ProcessMonitor");
+    }
+
     public void start() {
         if (!running) {
             running = true;
             readyRunner.start();
+            monitorRunner.start();
             Logger.debug("Iniciando ProcessManager");
         }
     }
@@ -89,6 +158,7 @@ public class ProcessManager {
         if (running) {
             Logger.debug("Finalizando ProcessManager");
             readyRunner.interrupt();
+            monitorRunner.interrupt();
         }
     }
 

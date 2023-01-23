@@ -1,11 +1,16 @@
 package files;
 
+import common.FileOperation;
 import common.block.Block;
 import common.block.BlockUtils;
+import exception.InexistentFileException;
+import exception.NotEnoughDiskException;
+import exception.NotFileOwnerException;
+import processes.ProcessManager;
 import util.Logger;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.text.MessageFormat;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -45,18 +50,43 @@ public class FileManager {
         );
     }
 
-    private int allocateDiskBlocks(final int size) {
-        return BlockUtils.firstFit(this.fileSystem, size, fileSystem);
-    }
+    public void processInstruction(final FileInstruction fileInstruction) {
+        if (fileInstruction.getOperation() == FileOperation.DELETE) {
+            final Integer priority = ProcessManager.getInstance().getProcessList()
+                    .get(fileInstruction.getPID()).getProcessPriority();
+            deleteFile(fileInstruction.getFileName(), fileInstruction.getPID(), priority);
+        } else {
+            try {
+                final FileCreationRequest fileCreationRequest = new FileCreationRequest(
+                        fileInstruction.getFileName(),
+                        new FileData(
+                                fileInstruction.getFileSize(),
+                                mapByPID(fileInstruction.getPID()),
+                                fileInstruction.getPID()
+                        )
+                );
+                createFile(fileCreationRequest);
 
-    private void freeDiskBlocks(final int startingPosition, final int size) {
-        Logger.info("Liberando espaço em disco nos blocos [" + startingPosition + ":" + (startingPosition + size) + "]");
-        for(int i = startingPosition; i < startingPosition + size; i++){
-            fileSystem.get(i).free();
+                final FileData fileData = fileMap.get(fileCreationRequest.getFileName());
+                final String message = MessageFormat.format(
+                        "O processo {0} criou o arquivo {1} (blocos {2}:{3})",
+                        fileInstruction.getPID(),
+                        fileInstruction.getFileName(),
+                        fileData.getStartingPosition(),
+                        fileData.getStartingPosition() + fileData.getSize()
+                );
+
+                Logger.info(message);
+            } catch (NotEnoughDiskException e) {
+                final String message = MessageFormat.format(
+                        "O processo {0} não pode criar o arquivo {1} (falta de espaço)"
+                , fileInstruction.getPID(), fileInstruction.getFileName());
+                Logger.info(message);
+            }
         }
     }
 
-    public void createFile(final FileCreationRequest fileCreationRequest) {
+    private void createFile(final FileCreationRequest fileCreationRequest) {
         if (fileCreationRequest.getFileData().getOwnedBy() == FileOwnedBy.SYSTEM) {
             // criado pelo sistema, deve tomar posicao inicial
             this.fileMap.put(fileCreationRequest.getFileName(), fileCreationRequest.getFileData());
@@ -73,10 +103,57 @@ public class FileManager {
         }
     }
 
-    public void deleteFile(final String fileName) {
-        // remover arquivo do fileSystem
-        // verificar se arquivo existe, se nao existe throw new InexistentFileException()
-        // verificar se o dono eh quem pediu pra deletar (se n for prio = 0), se n for NotFileOwnerException
+    private FileOwnedBy mapByPID(final Integer PID) {
+        final Integer priority = ProcessManager.getInstance().getProcessList().get(PID).getProcessPriority();
+        if (priority == 0) {
+            return FileOwnedBy.SYSTEM;
+        }
+        return FileOwnedBy.USER_PROCESS;
+    }
+
+    private int allocateDiskBlocks(final int size) {
+        return BlockUtils.firstFit(this.fileSystem, size).orElseThrow(NotEnoughDiskException::new);
+    }
+
+    private void deleteFile(final String fileName, final Integer PID, final Integer priority) {
+        if (!fileMap.containsKey(fileName)) {
+            throw new InexistentFileException(fileName);
+        }
+
+        if (priority != 0) {
+            if (!Objects.equals(PID, fileMap.get(fileName).getOwnerPID())) {
+                throw new NotFileOwnerException(fileName, PID);
+            }
+        }
+
+        final FileData file = fileMap.get(fileName);
+
+        BlockUtils.freeBlocks(file.getStartingPosition(), file.getStartingPosition() + file.getSize(), fileSystem);
+        fileMap.remove(fileName);
+    }
+
+    public void printAllocationMap() {
+        final List<String> allocationMap = new ArrayList<>(Collections.nCopies(totalBlocks, " "));
+
+        for (Map.Entry<String, FileData> entry : fileMap.entrySet()) {
+            final int starting = entry.getValue().getStartingPosition();
+            final int ending = entry.getValue().getStartingPosition() + entry.getValue().getSize();
+
+            for (int i=starting;i<ending;i++) {
+                allocationMap.set(i, entry.getKey());
+            }
+        }
+
+        Formatter formatter = new Formatter();
+        Formatter separator = new Formatter();
+        allocationMap.forEach(item -> {
+            separator.format(" ---");
+            formatter.format("| %s ", item);
+        });
+
+        System.out.println(separator);
+        System.out.println(formatter + "|");
+        System.out.println(separator);
     }
 
 }
