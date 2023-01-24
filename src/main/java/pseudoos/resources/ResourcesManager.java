@@ -3,8 +3,6 @@ package resources;
 import exception.InsufficientResources;
 import util.Logger;
 
-import java.util.concurrent.Semaphore;
-
 // Gerenciador de resursos do pseudoOS.
 public class ResourcesManager {
 
@@ -88,11 +86,13 @@ public class ResourcesManager {
         }
     }
 
-    public void refoundModem(int PID){
+    public boolean refoundModem(int PID){
         if(modem.getPIDs().contains(PID)){
             modem.setQuantity(modem.getQuantity() + 1);
             modem.removePID(PID);
+            return true;
         }
+        return false;
     }
 
     public void refoundSata(int PID){

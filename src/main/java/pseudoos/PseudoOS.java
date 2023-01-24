@@ -3,15 +3,12 @@ import files.FileManager;
 import inputreader.file.FileReader;
 import inputreader.file.FileSystemInitializationRequest;
 import inputreader.process.ProcessReader;
-import memory.MemoryManager;
-import processes.Process;
 import processes.ProcessCreationRequest;
 import processes.ProcessManager;
 import queues.Scheduler;
 import util.Logger;
 
 import java.util.List;
-import java.util.Set;
 
 public class PseudoOS {
 

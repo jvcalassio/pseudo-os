@@ -42,14 +42,14 @@ public class MemoryManager {
     }
 
     public void freeRealTimeBlocks(final int initialBlock, final int size) {
-        Logger.info("Liberando memória real-time nos blocos [" + initialBlock + ":" + (initialBlock + size) + "]");
+        Logger.debug("Liberando memória real-time nos blocos [" + initialBlock + ":" + (initialBlock + size) + "]");
         for(int i = initialBlock; i < initialBlock + size; i++){
             getRealTimeBlocks().get(i).free();
         }
     }
 
     public void freeUserBlocks(final int initialBlock, final int size) {
-        Logger.info("Liberando memória de usuário nos blocos [" + initialBlock + ":" + (initialBlock + size) + "]");
+        Logger.debug("Liberando memória de usuário nos blocos [" + initialBlock + ":" + (initialBlock + size) + "]");
         for(int i = initialBlock; i < initialBlock + size; i++){
             getUserBlocks().get(i).free();
         }

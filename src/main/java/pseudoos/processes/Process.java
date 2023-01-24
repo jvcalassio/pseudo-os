@@ -4,7 +4,6 @@ import resources.ResourcesManager;
 import util.Logger;
 
 import java.util.concurrent.Semaphore;
-import java.util.concurrent.locks.Lock;
 
 public class Process {
 
@@ -18,10 +17,9 @@ public class Process {
     private final boolean scanners;
     private final boolean modems;
     private final boolean sata;
-    private ProcessStatus status;
-    private Semaphore runningBlockedSemaphore;
-    private Semaphore readySemaphore;
+    private ProcessStatus status = ProcessStatus.CREATED;
     private int PC;
+    private final Semaphore statusSemaphore;
 
     public Process(final ProcessCreationRequest processCreationRequest,
                    final int currentMemoryOffset) {
@@ -38,9 +36,149 @@ public class Process {
         this.offset = currentMemoryOffset;
         this.PC = 0;
 
-        this.runningBlockedSemaphore = new Semaphore(0);
-        this.readySemaphore = new Semaphore(0);
-        this.ready();
+        this.statusSemaphore = new Semaphore(1);
+    }
+
+    public void run() {
+        requestResources();
+        if (status == ProcessStatus.BLOCKED) {
+            return;
+        }
+
+        this.running();
+
+        while (status == ProcessStatus.RUNNING && !Thread.currentThread().isInterrupted()) {
+            time -= 0.001;
+
+            if (time <= 0) {
+                finished();
+                break;
+            }
+
+            double roundedTime = time.intValue();
+            if (time - roundedTime < 0.001) {
+                PC++;
+                Logger.info("P" + PID + " instruction " + PC);
+            }
+        }
+
+        if (status == ProcessStatus.RUNNING) {
+            this.ready();
+        }
+    }
+
+    public void blockedRunner() {
+        try {
+            waitResources();
+            this.ready();
+        } catch (InterruptedException e) {
+            Logger.debug("O processo " + PID + " foi interrompido enquanto esperava por E/S.");
+        }
+    }
+
+    public void ready() {
+        this.setStatus(ProcessStatus.READY);
+    }
+
+    public void blocked() {
+        this.setStatus(ProcessStatus.BLOCKED);
+    }
+
+    public void running() {
+        this.setStatus(ProcessStatus.RUNNING);
+    }
+
+    public void finished() { this.setStatus(ProcessStatus.FINISHED); }
+
+    private void setStatus(ProcessStatus status) {
+        statusSemaphore.acquireUninterruptibly();
+        final ProcessStatus oldStatus = this.status;
+        this.status = status;
+        statusSemaphore.release();
+
+        ProcessManager.getInstance().statusListener(PID, oldStatus, status);
+    }
+
+    private void requestResources() {
+        ResourcesManager resourcesManager = ResourcesManager.getInstance();
+        if (this.scanners && !resourcesManager.getScanner().getPIDs().contains(PID)) {
+            Logger.debug("Alocando scanner para o processo: " + PID);
+            if (resourcesManager.getScanner().getSemaphore().tryAcquire()) {
+                resourcesManager.requestScanner(PID);
+            } else {
+                this.blocked();
+            }
+        }
+        if (this.printers && !resourcesManager.getPrinter().getPIDs().contains(PID)) {
+            Logger.debug("Alocando impressora para o processo: " + PID);
+            if (resourcesManager.getPrinter().getSemaphore().tryAcquire()) {
+                resourcesManager.requestPrinter(PID);
+            } else {
+                this.blocked();
+            }
+        }
+        if (this.modems && !resourcesManager.getModem().getPIDs().contains(PID)) {
+            Logger.debug("Alocando modem para o processo: " + PID);
+            if (resourcesManager.getModem().getSemaphore().tryAcquire()) {
+                resourcesManager.requestModem(PID);
+            } else {
+                Logger.debug("Nao foi possivel alocar modem para o processo " + PID + ", bloqueando...");
+                this.blocked();
+            }
+        }
+        if (this.sata && !resourcesManager.getSata().getPIDs().contains(PID)) {
+            Logger.debug("Alocando sata para o processo: " + PID);
+            if (resourcesManager.getSata().getSemaphore().tryAcquire()) {
+                resourcesManager.requestSata(PID);
+            } else {
+                this.blocked();
+            }
+        }
+    }
+
+    public void waitResources() throws InterruptedException {
+        ResourcesManager resourcesManager = ResourcesManager.getInstance();
+        if (this.scanners && !resourcesManager.getScanner().getPIDs().contains(PID)) {
+            resourcesManager.getScanner().getSemaphore().acquire();
+            resourcesManager.requestScanner(PID);
+        }
+        if (this.printers && !resourcesManager.getPrinter().getPIDs().contains(PID)) {
+            resourcesManager.getPrinter().getSemaphore().acquire();
+            resourcesManager.requestPrinter(PID);
+        }
+        if (this.modems && !resourcesManager.getModem().getPIDs().contains(PID)) {
+            resourcesManager.getModem().getSemaphore().acquire();
+            resourcesManager.requestModem(PID);
+        }
+        if (this.sata && !resourcesManager.getSata().getPIDs().contains(PID)) {
+            resourcesManager.getSata().getSemaphore().acquire();
+            resourcesManager.requestSata(PID);
+        }
+    }
+
+    public void refoundResources() {
+        ResourcesManager resourcesManager = ResourcesManager.getInstance();
+        if (this.scanners) {
+            Logger.debug("Liberando scanner do processo: " + PID);
+            resourcesManager.refoundScanner(PID);
+            resourcesManager.getScanner().getSemaphore().release();
+        }
+        if (this.printers) {
+            Logger.debug("Liberando impressora do processo: " + PID);
+            resourcesManager.refoundPrinter(PID);
+            resourcesManager.getPrinter().getSemaphore().release();
+        }
+        if (this.modems) {
+            Logger.debug("Liberando modem do processo: " + PID);
+            if (resourcesManager.refoundModem(PID)) {
+                resourcesManager.getModem().getSemaphore().release();
+            }
+        }
+        if (this.sata) {
+            Logger.debug("Liberando sata do processo: " + PID);
+            resourcesManager.refoundSata(PID);
+            resourcesManager.getSata().getSemaphore().release();
+        }
     }
 
     public int getPID() {
@@ -63,159 +201,8 @@ public class Process {
         return blocks;
     }
 
-    public void run() {
-        requestResources();
-        this.running();
-
-        while (true) {
-            if (Thread.interrupted()) {
-                this.ready();
-                break;
-            }
-
-            time -= 0.001;
-
-            if (time <= 0) {
-                Logger.info("P" + PID + " return SIGINT");
-                refoundResources();
-                break;
-            }
-
-            double roundedTime = time.intValue();
-            if (time - roundedTime < 0.001) {
-                PC++;
-                Logger.info("P" + PID + " instruction " + PC);
-            }
-        }
-    }
-
-    public void ready() {
-        this.status = ProcessStatus.READY;
-        this.readySemaphore.release();
-    }
-
-    public void blocked() {
-        this.status = ProcessStatus.BLOCKED;
-        this.runningBlockedSemaphore.release();
-    }
-
-    public void running() {
-        this.status = ProcessStatus.RUNNING;
-        this.runningBlockedSemaphore.release();
-    }
-
-    public void finished() {
-        this.status = ProcessStatus.FINISHED;
-    }
-
-    public void waitUntilRunningOrBlocked() throws InterruptedException {
-        runningBlockedSemaphore.acquire();
-        runningBlockedSemaphore.drainPermits();
-    }
-
-    public void waitUntilReady() throws InterruptedException {
-        readySemaphore.acquire();
-        readySemaphore.drainPermits();
-    }
-
-    public void requestResources() {
-        ResourcesManager resourcesManager = ResourcesManager.getInstance();
-        if (this.scanners) {
-            if (resourcesManager.getScanner().getPIDs().contains(this.getPID())) {
-                return;
-            }
-
-            Logger.info("Alocando scanner para o processo: " + PID);
-            if (resourcesManager.getScanner().getSemaphore().tryAcquire()) {
-                resourcesManager.requestScanner(PID);
-            } else {
-                blocked();
-                try {
-                    resourcesManager.getScanner().getSemaphore().acquire();
-                    resourcesManager.requestScanner(PID);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-        if (this.printers) {
-            if (resourcesManager.getPrinter().getPIDs().contains(this.getPID())) {
-                return;
-            }
-
-            Logger.info("Alocando impressora para o processo: " + PID);
-            if (resourcesManager.getPrinter().getSemaphore().tryAcquire()) {
-                resourcesManager.requestPrinter(PID);
-            } else {
-                blocked();
-                try {
-                    resourcesManager.getPrinter().getSemaphore().acquire();
-                    resourcesManager.requestPrinter(PID);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-        if (this.modems) {
-            if (resourcesManager.getModem().getPIDs().contains(this.getPID())) {
-                return;
-            }
-
-            Logger.info("Alocando modem para o processo: " + PID);
-            if (resourcesManager.getModem().getSemaphore().tryAcquire()) {
-                resourcesManager.requestModem(PID);
-            } else {
-                blocked();
-                try {
-                    resourcesManager.getModem().getSemaphore().acquire();
-                    resourcesManager.requestModem(PID);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-        if (this.sata) {
-            if (resourcesManager.getSata().getPIDs().contains(this.getPID())) {
-                return;
-            }
-
-            Logger.info("Alocando sata para o processo: " + PID);
-            if (resourcesManager.getSata().getSemaphore().tryAcquire()) {
-                resourcesManager.requestSata(PID);
-            } else {
-                blocked();
-                try {
-                    resourcesManager.getSata().getSemaphore().acquire();
-                    resourcesManager.requestSata(PID);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-        }
-    }
-
-    public void refoundResources() {
-        ResourcesManager resourcesManager = ResourcesManager.getInstance();
-        if (this.scanners) {
-            Logger.info("Liberando scanner do processo: " + PID);
-            resourcesManager.refoundScanner(PID);
-            resourcesManager.getScanner().getSemaphore().release();
-        }
-        if (this.printers) {
-            Logger.info("Liberando impressora do processo: " + PID);
-            resourcesManager.refoundPrinter(PID);
-            resourcesManager.getPrinter().getSemaphore().release();
-        }
-        if (this.modems) {
-            Logger.info("Liberando modem do processo: " + PID);
-            resourcesManager.refoundModem(PID);
-            resourcesManager.getModem().getSemaphore().release();
-        }
-        if (this.sata) {
-            Logger.info("Liberando sata do processo: " + PID);
-            resourcesManager.refoundSata(PID);
-            resourcesManager.getSata().getSemaphore().release();
-        }
+    public Semaphore getStatusSemaphore() {
+        return statusSemaphore;
     }
 
     @Override

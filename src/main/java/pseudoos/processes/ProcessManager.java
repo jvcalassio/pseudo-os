@@ -1,7 +1,6 @@
 package processes;
 
 import exception.NotEnoughMemoryException;
-import exception.NotFileOwnerException;
 import memory.MemoryManager;
 import queues.Scheduler;
 import util.Logger;
@@ -9,6 +8,8 @@ import util.Logger;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -20,6 +21,7 @@ public class ProcessManager {
     private final BlockingQueue<Process> readyProcesses;
     private final BlockingQueue<Process> blockedProcesses;
     private final Thread readyRunner;
+    private final Thread blockedRunner;
     private final Thread monitorRunner;
     private final Semaphore finishedProcesses;
 
@@ -35,6 +37,7 @@ public class ProcessManager {
         this.blockedProcesses = new LinkedBlockingQueue<>(1000);
         this.running = false;
         this.readyRunner = createReadyRunnerThread();
+        this.blockedRunner = createBlockedRunnerThread();
         this.monitorRunner = createProcessMonitor();
         this.processList = new ConcurrentHashMap<>();
         this.finishedProcesses = new Semaphore(0);
@@ -54,7 +57,8 @@ public class ProcessManager {
             if (!processList.containsKey(createdProcess.getPID())) {
                 processList.put(createdProcess.getPID(), createdProcess);
             }
-            readyProcess(createdProcess);
+//            readyProcess(createdProcess);
+            createdProcess.ready();
         } catch (NotEnoughMemoryException e) {
             final Process createdProcess = new Process(creationRequest, 0);
             createdProcess.finished();
@@ -64,26 +68,26 @@ public class ProcessManager {
             throw new NotEnoughMemoryException(createdProcess.getPID(), e);
         }
     }
-    public void readyProcess(final Process process) {
-        process.ready();
-        readyProcesses.add(process);
-        Logger.debug("Processo #" + process.getPID() + " pronto.");
-    }
 
-    public void addBlockedProcess(final Process process) {
-        blockedProcesses.add(process);
-    }
+    public void statusListener(Integer PID, ProcessStatus oldStatus, ProcessStatus newStatus) {
+        final Process process = processList.get(PID);
 
-    public void finishProcess(final Process process) {
-        if (process.getProcessPriority() == 0) {
-            MemoryManager.getInstance().freeRealTimeBlocks(process.getOffset(), process.getBlocks());
-        } else {
-            MemoryManager.getInstance().freeUserBlocks(process.getOffset(), process.getBlocks());
+        if (newStatus == ProcessStatus.READY) {
+            this.readyProcesses.add(process);
+        } else if (newStatus == ProcessStatus.BLOCKED) {
+            this.blockedProcesses.add(process);
+        } else if (newStatus == ProcessStatus.FINISHED) {
+            if (process.getProcessPriority() == 0) {
+                MemoryManager.getInstance().freeRealTimeBlocks(process.getOffset(), process.getBlocks());
+            } else {
+                MemoryManager.getInstance().freeUserBlocks(process.getOffset(), process.getBlocks());
+            }
+            process.refoundResources();
+            Logger.info("P" + PID + " return SIGINT");
+            this.finishedProcesses.release();
         }
-        process.finished();
-        Logger.debug("Processo #" + process.getPID() + " finalizado.");
-        this.finishedProcesses.release();
     }
+
 
     public Semaphore getFinishedProcesses() {
         return finishedProcesses;
@@ -112,6 +116,21 @@ public class ProcessManager {
         }, "ProcessManager");
     }
 
+    public Thread createBlockedRunnerThread() {
+        return new Thread(() -> {
+            while(running) {
+                try {
+                    final Process blockedProcess = blockedProcesses.take();
+                    final Thread blockedThread = new Thread(blockedProcess::blockedRunner);
+                    blockedThread.start();
+                } catch (InterruptedException e) {
+                    running = false;
+                    Logger.debug("BlockedRunner finalizado.");
+                }
+            }
+        }, "BlockedRunner");
+    }
+
     public Thread createProcessMonitor() {
         return new Thread(() -> {
             BufferedWriter fileWriter;
@@ -120,6 +139,8 @@ public class ProcessManager {
             } catch (IOException e) {
                 throw new RuntimeException("Erro ao criar output do ProcessMonitor");
             }
+
+            Long counter = 0L;
             while (running) {
                 try {
                     if (processList.isEmpty()) {
@@ -129,8 +150,9 @@ public class ProcessManager {
                     for (Map.Entry<Integer, Process> item : processList.entrySet()) {
                         output += item.getKey() + "-" + item.getValue().getStatus() + ", ";
                     }
-                    fileWriter.append(output).append("\n");
+                    fileWriter.append(counter.toString()).append(": ").append(output).append("\n");
                     Thread.sleep(1);
+                    counter++;
                 } catch (InterruptedException | IOException e) {
                     running = false;
                     Logger.debug("ProcessMonitor finalizado.");
@@ -149,6 +171,7 @@ public class ProcessManager {
         if (!running) {
             running = true;
             readyRunner.start();
+            blockedRunner.start();
             monitorRunner.start();
             Logger.debug("Iniciando ProcessManager");
         }
@@ -157,8 +180,9 @@ public class ProcessManager {
     public void stop() {
         if (running) {
             Logger.debug("Finalizando ProcessManager");
-            readyRunner.interrupt();
             monitorRunner.interrupt();
+            blockedRunner.interrupt();
+            readyRunner.interrupt();
         }
     }
 

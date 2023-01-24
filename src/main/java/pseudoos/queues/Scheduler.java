@@ -1,8 +1,6 @@
 package queues;
 
 import processes.Process;
-import processes.ProcessManager;
-import processes.ProcessStatus;
 import util.Logger;
 
 import java.util.Comparator;
@@ -19,7 +17,6 @@ public class Scheduler {
     private final PriorityBlockingQueue<Process> userProcessesHigh;
     private final PriorityBlockingQueue<Process> userProcessesMedium;
     private final PriorityBlockingQueue<Process> userProcessesLow;
-
     private final Thread schedulerThread;
     private final Semaphore isDispatcherReady;
     private final Dispatcher dispatcher;
@@ -31,12 +28,14 @@ public class Scheduler {
         return instance;
     }
 
-
     private Scheduler() {
         this.realTimeProcesses = new ConcurrentLinkedQueue<>();
-        this.userProcessesHigh = new PriorityBlockingQueue<>(1000, Comparator.comparing(Process::getProcessPriority));
-        this.userProcessesMedium = new PriorityBlockingQueue<>(1000, Comparator.comparing(Process::getProcessPriority));
-        this.userProcessesLow = new PriorityBlockingQueue<>(1000, Comparator.comparing(Process::getProcessPriority));
+        this.userProcessesHigh = new PriorityBlockingQueue<>(1000,
+                Comparator.comparing(Process::getProcessPriority));
+        this.userProcessesMedium = new PriorityBlockingQueue<>(1000,
+                Comparator.comparing(Process::getProcessPriority));
+        this.userProcessesLow = new PriorityBlockingQueue<>(1000,
+                Comparator.comparing(Process::getProcessPriority));
         this.running = false;
         this.schedulerThread = createSchedulerThread();
 
@@ -50,7 +49,7 @@ public class Scheduler {
                 try {
                     isDispatcherReady.acquire();
                     if (!realTimeProcesses.isEmpty()) {
-                        dispatcher.dispatch(realTimeProcesses.remove());
+                        dispatchRealTimeProcess();
                     } else if (!userProcessesHigh.isEmpty()) {
                         dispatchUserProcess(userProcessesHigh);
                     } else if (!userProcessesMedium.isEmpty()) {
@@ -78,16 +77,25 @@ public class Scheduler {
         }, "Scheduler");
     }
 
+    private void dispatchRealTimeProcess() {
+        dispatcher.dispatch(realTimeProcesses.remove());
+    }
+
     private void dispatchUserProcess(final PriorityBlockingQueue<Process> queue) {
-        final Process currentProcess = queue.remove();
-        if (currentProcess.getStatus() != ProcessStatus.BLOCKED) {
-            final boolean reinsert = dispatcher.dispatch(currentProcess);
-            if (reinsert) {
-                addUserProcess(currentProcess);
-                Logger.debug("Reinserindo processo #" + currentProcess.getPID());
-            }
+        dispatcher.dispatch(queue.remove());
+    }
+
+    public void addRealTimeProcess(final Process process) {
+        realTimeProcesses.add(process);
+    }
+
+    public void addUserProcess(final Process process) {
+        if (process.getProcessPriority() == 1) {
+            userProcessesHigh.add(process);
+        } else if (process.getProcessPriority() == 2) {
+            userProcessesMedium.add(process);
         } else {
-            ProcessManager.getInstance().addBlockedProcess(currentProcess);
+            userProcessesLow.add(process);
         }
     }
 
@@ -103,20 +111,6 @@ public class Scheduler {
         if (running) {
             Logger.debug("Finalizado Scheduler");
             schedulerThread.interrupt();
-        }
-    }
-
-    public void addRealTimeProcess(final Process process) {
-        realTimeProcesses.add(process);
-    }
-
-    public void addUserProcess(final Process process) {
-        if (process.getProcessPriority() == 1) {
-            userProcessesHigh.add(process);
-        } else if (process.getProcessPriority() == 2) {
-            userProcessesMedium.add(process);
-        } else {
-            userProcessesLow.add(process);
         }
     }
 
