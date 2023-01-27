@@ -20,7 +20,7 @@ public class FileManager {
     private int totalBlocks;
     private List<Block> fileSystem;
     private final ConcurrentMap<String, FileData> fileMap;
-    private List<FileInstruction> instructions;
+    private final ConcurrentMap<Integer, List<FileInstruction>> instructionMap;
 
     public static FileManager getInstance() {
         if (instance == null) {
@@ -32,29 +32,72 @@ public class FileManager {
     private FileManager() {
         this.totalBlocks = 0;
         this.fileMap = new ConcurrentHashMap<>();
-        this.instructions = new LinkedList<>();
         this.fileSystem = new LinkedList<>();
+        this.instructionMap = new ConcurrentHashMap<>();
     }
 
     public void initialize(final int numberOfBlocks,
                            final List<FileCreationRequest> fileCreationRequests,
-                           final List<FileInstruction> instructions) {
+                           final List<FileInstruction> instructions) throws NotEnoughDiskException {
         this.totalBlocks = numberOfBlocks;
-        this.instructions = instructions;
         this.fileSystem = BlockUtils.generateEmptyBlocks(this.totalBlocks);
-        fileCreationRequests.forEach(this::createFile);
+        for (FileCreationRequest fileCreationRequest : fileCreationRequests) {
+            createFile(fileCreationRequest);
+        }
 
         fileMap.forEach((key, value) ->
                 BlockUtils.allocateBlocks(value.getStartingPosition(),
                         value.getStartingPosition() + value.getSize(), this.fileSystem)
         );
+
+        instructions.forEach(instruction -> {
+            if (!this.instructionMap.containsKey(instruction.getPID())) {
+                this.instructionMap.put(instruction.getPID(), new LinkedList<>());
+            }
+            this.instructionMap.get(instruction.getPID()).add(instruction);
+        });
     }
 
-    public void processInstruction(final FileInstruction fileInstruction) {
+    private int allocateDiskBlocks(final int size) throws NotEnoughDiskException {
+        return BlockUtils.firstFit(this.fileSystem, size).orElseThrow(NotEnoughDiskException::new);
+    }
+
+    public void processNextInstruction(final Integer PID) {
+        if (!this.instructionMap.containsKey(PID)) {
+            return;
+        }
+
+        final List<FileInstruction> instructions = this.instructionMap.get(PID);
+        if (!instructions.isEmpty()) {
+            this.processInstruction(instructions.remove(0));
+        }
+    }
+
+    private void processInstruction(final FileInstruction fileInstruction) {
         if (fileInstruction.getOperation() == FileOperation.DELETE) {
-            final Integer priority = ProcessManager.getInstance().getProcessList()
-                    .get(fileInstruction.getPID()).getProcessPriority();
-            deleteFile(fileInstruction.getFileName(), fileInstruction.getPID(), priority);
+            try {
+                final Integer priority = ProcessManager.getInstance().getProcessList()
+                        .get(fileInstruction.getPID()).getProcessPriority();
+                deleteFile(fileInstruction.getFileName(), fileInstruction.getPID(), priority);
+
+                final String message = MessageFormat.format(
+                        "O processo {0} deletou o arquivo {1}",
+                        fileInstruction.getPID(),
+                        fileInstruction.getFileName()
+                );
+
+                Logger.info(message);
+            } catch (NotFileOwnerException e) {
+                final String message = MessageFormat.format(
+                        "O processo {0} não pode apagar o arquivo {1} (nao eh dono)"
+                        , fileInstruction.getPID(), fileInstruction.getFileName());
+                Logger.info(message);
+            } catch (InexistentFileException e) {
+                final String message = MessageFormat.format(
+                        "O processo {0} não pode apagar o arquivo {1} (inexistente)"
+                        , fileInstruction.getPID(), fileInstruction.getFileName());
+                Logger.info(message);
+            }
         } else {
             try {
                 final FileCreationRequest fileCreationRequest = new FileCreationRequest(
@@ -86,7 +129,7 @@ public class FileManager {
         }
     }
 
-    private void createFile(final FileCreationRequest fileCreationRequest) {
+    private void createFile(final FileCreationRequest fileCreationRequest) throws NotEnoughDiskException {
         if (fileCreationRequest.getFileData().getOwnedBy() == FileOwnedBy.SYSTEM) {
             // criado pelo sistema, deve tomar posicao inicial
             this.fileMap.put(fileCreationRequest.getFileName(), fileCreationRequest.getFileData());
@@ -103,19 +146,8 @@ public class FileManager {
         }
     }
 
-    private FileOwnedBy mapByPID(final Integer PID) {
-        final Integer priority = ProcessManager.getInstance().getProcessList().get(PID).getProcessPriority();
-        if (priority == 0) {
-            return FileOwnedBy.SYSTEM;
-        }
-        return FileOwnedBy.USER_PROCESS;
-    }
-
-    private int allocateDiskBlocks(final int size) {
-        return BlockUtils.firstFit(this.fileSystem, size).orElseThrow(NotEnoughDiskException::new);
-    }
-
-    private void deleteFile(final String fileName, final Integer PID, final Integer priority) {
+    private void deleteFile(final String fileName, final Integer PID, final Integer priority)
+            throws InexistentFileException, NotFileOwnerException {
         if (!fileMap.containsKey(fileName)) {
             throw new InexistentFileException(fileName);
         }
@@ -130,6 +162,14 @@ public class FileManager {
 
         BlockUtils.freeBlocks(file.getStartingPosition(), file.getStartingPosition() + file.getSize(), fileSystem);
         fileMap.remove(fileName);
+    }
+
+    private FileOwnedBy mapByPID(final Integer PID) {
+        final Integer priority = ProcessManager.getInstance().getProcessList().get(PID).getProcessPriority();
+        if (priority == 0) {
+            return FileOwnedBy.REAL_TIME_PROCESS;
+        }
+        return FileOwnedBy.USER_PROCESS;
     }
 
     public void printAllocationMap() {

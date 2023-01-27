@@ -32,8 +32,8 @@ public class ResourcesManager {
         this.sata = new Resource(2);
     }
 
-    public boolean requestScanner(int PID){
-        if(scanner.getQuantity() > 0){
+    public boolean requestScanner(int PID) throws InsufficientResources {
+        if (scanner.getQuantity() > 0) {
             scanner.setQuantity(scanner.getQuantity() - 1);
             scanner.addPID(PID);
             Logger.debug("Scanner alocado para o processo " + PID);
@@ -42,8 +42,8 @@ public class ResourcesManager {
         throw new InsufficientResources("Scanner");
     }
 
-    public boolean requestPrinter(int PID){
-        if(printer.getQuantity() > 0){
+    public boolean requestPrinter(int PID) throws InsufficientResources {
+        if (printer.getQuantity() > 0) {
             printer.setQuantity(printer.getQuantity() - 1);
             printer.addPID(PID);
             Logger.debug("Impressora alocado para o processo " + PID);
@@ -52,8 +52,8 @@ public class ResourcesManager {
         throw new InsufficientResources("Printer");
     }
 
-    public boolean requestModem(int PID){
-        if(modem.getQuantity() > 0){
+    public boolean requestModem(int PID) throws InsufficientResources {
+        if (modem.getQuantity() > 0) {
             modem.setQuantity(modem.getQuantity() - 1);
             modem.addPID(PID);
             Logger.debug("Modem alocado para o processo " + PID);
@@ -62,8 +62,8 @@ public class ResourcesManager {
         throw new InsufficientResources("Modem");
     }
 
-    public boolean requestSata(int PID){
-        if(sata.getQuantity() > 0){
+    public boolean requestSata(int PID) throws InsufficientResources {
+        if (sata.getQuantity() > 0) {
             sata.setQuantity(sata.getQuantity() - 1);
             sata.addPID(PID);
             Logger.debug("SATA alocado para o processo " + PID);
@@ -72,22 +72,22 @@ public class ResourcesManager {
         throw new InsufficientResources("SATA");
     }
 
-    public void refoundScanner(int PID){
-        if(scanner.getPIDs().contains(PID)){
+    public void refundScanner(int PID) {
+        if (scanner.getPIDs().contains(PID)) {
             scanner.setQuantity(scanner.getQuantity() + 1);
             scanner.removePID(PID);
         }
     }
 
-    public void refoundPrinter(int PID){
-        if(printer.getPIDs().contains(PID)){
+    public void refundPrinter(int PID) {
+        if (printer.getPIDs().contains(PID)) {
             printer.setQuantity(printer.getQuantity() + 1);
             printer.removePID(PID);
         }
     }
 
-    public boolean refoundModem(int PID){
-        if(modem.getPIDs().contains(PID)){
+    public boolean refundModem(int PID) {
+        if (modem.getPIDs().contains(PID)) {
             modem.setQuantity(modem.getQuantity() + 1);
             modem.removePID(PID);
             return true;
@@ -95,8 +95,8 @@ public class ResourcesManager {
         return false;
     }
 
-    public void refoundSata(int PID){
-        if(sata.getPIDs().contains(PID)){
+    public void refundSata(int PID) {
+        if (sata.getPIDs().contains(PID)) {
             sata.setQuantity(sata.getQuantity() + 1);
             sata.removePID(PID);
         }

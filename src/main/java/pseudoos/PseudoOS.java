@@ -1,3 +1,4 @@
+import exception.NotEnoughDiskException;
 import exception.NotEnoughMemoryException;
 import files.FileManager;
 import inputreader.file.FileReader;
@@ -14,7 +15,7 @@ public class PseudoOS {
 
     public PseudoOS() {}
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, NotEnoughDiskException {
         if (args.length != 2) {
             System.out.println("Run with ./dispatcher processes.txt files.txt");
             System.exit(1);
@@ -48,13 +49,7 @@ public class PseudoOS {
                 final ProcessCreationRequest nextProcess = processCreationRequestList.get(0);
                 Logger.debug(nextProcess.toString());
 
-                try {
-                    ProcessManager.getInstance().createProcess(nextProcess);
-                } catch (NotEnoughMemoryException e) {
-                    Logger.info(e.getMessage());
-                    processCount--;
-                }
-
+                ProcessManager.getInstance().createProcess(nextProcess);
                 processCreationRequestList.remove(0);
             }
 

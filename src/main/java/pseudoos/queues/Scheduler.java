@@ -60,15 +60,6 @@ public class Scheduler {
                         isDispatcherReady.release();
                         Thread.sleep(1);
                     }
-                    /*
-                     * Verificar RT, se tiver algum ele vai ser escolhido pra ser o prox
-                     * Se nao tiver, vai ser o q tiver em userProcessesHigh,
-                     * Se nao tiver, vai ser o q tiver em userProcessesMedium
-                     * Se nao tiver, vai ser o q tiver em userProcessesLow
-                     * Se nao tiver, tenta dnv
-                     *
-                     * enviar o processo removido pro dispatcher
-                     */
                 } catch (InterruptedException e) {
                     running = false;
                     Logger.debug("Scheduler finalizado.");

@@ -1,5 +1,9 @@
 package processes;
 
+import exception.InsufficientResources;
+import exception.NotEnoughMemoryException;
+import files.FileManager;
+import memory.MemoryManager;
 import resources.ResourcesManager;
 import util.Logger;
 
@@ -10,9 +14,9 @@ public class Process {
     public static int processCounter = 0;
     private final Integer PID;
     private Double time;
-    private int priority;
+    private final int priority;
     private final int blocks;
-    private final int offset;
+    private int offset;
     private final boolean printers;
     private final boolean scanners;
     private final boolean modems;
@@ -21,8 +25,7 @@ public class Process {
     private int PC;
     private final Semaphore statusSemaphore;
 
-    public Process(final ProcessCreationRequest processCreationRequest,
-                   final int currentMemoryOffset) {
+    public Process(final ProcessCreationRequest processCreationRequest) throws NotEnoughMemoryException {
         this.PID = processCounter;
         processCounter++;
 
@@ -33,10 +36,11 @@ public class Process {
         this.scanners = processCreationRequest.hasScanners();
         this.modems = processCreationRequest.hasModems();
         this.sata = processCreationRequest.hasSatas();
-        this.offset = currentMemoryOffset;
+        this.offset = -1;
         this.PC = 0;
 
         this.statusSemaphore = new Semaphore(1);
+        this.requestMemory();
     }
 
     public void run() {
@@ -62,6 +66,7 @@ public class Process {
             double roundedTime = time.intValue();
             if (time - roundedTime < 0.001) {
                 PC++;
+                FileManager.getInstance().processNextInstruction(PID);
                 Logger.info("P" + PID + " instruction " + PC);
             }
         }
@@ -92,7 +97,12 @@ public class Process {
         this.setStatus(ProcessStatus.RUNNING);
     }
 
-    public void finished() { this.setStatus(ProcessStatus.FINISHED); }
+    public void finished() {
+        Logger.info("P" + PID + " return SIGINT");
+        this.freeMemory();
+        this.refoundResources();
+        this.setStatus(ProcessStatus.FINISHED);
+    }
 
     private void setStatus(ProcessStatus status) {
         statusSemaphore.acquireUninterruptibly();
@@ -101,6 +111,30 @@ public class Process {
         statusSemaphore.release();
 
         ProcessManager.getInstance().statusListener(PID, oldStatus, status);
+    }
+
+    private void requestMemory() throws NotEnoughMemoryException {
+        if (this.offset == -1) {
+            try {
+                if (this.priority == 0) {
+                    this.offset = MemoryManager.getInstance().allocateRealTimeBlocks(this.blocks);
+                } else {
+                    this.offset = MemoryManager.getInstance().allocateUserBlocks(this.blocks);
+                }
+            } catch (NotEnoughMemoryException e) {
+                throw new NotEnoughMemoryException(PID, e);
+            }
+        }
+    }
+
+    private void freeMemory() {
+        if (this.offset != -1) {
+            if (this.priority == 0) {
+                MemoryManager.getInstance().freeRealTimeBlocks(this.offset, this.blocks);
+            } else {
+                MemoryManager.getInstance().freeUserBlocks(this.offset, this.blocks);
+            }
+        }
     }
 
     private void requestResources() {
@@ -140,7 +174,7 @@ public class Process {
         }
     }
 
-    public void waitResources() throws InterruptedException {
+    public void waitResources() throws InterruptedException, InsufficientResources {
         ResourcesManager resourcesManager = ResourcesManager.getInstance();
         if (this.scanners && !resourcesManager.getScanner().getPIDs().contains(PID)) {
             resourcesManager.getScanner().getSemaphore().acquire();
@@ -164,23 +198,23 @@ public class Process {
         ResourcesManager resourcesManager = ResourcesManager.getInstance();
         if (this.scanners) {
             Logger.debug("Liberando scanner do processo: " + PID);
-            resourcesManager.refoundScanner(PID);
+            resourcesManager.refundScanner(PID);
             resourcesManager.getScanner().getSemaphore().release();
         }
         if (this.printers) {
             Logger.debug("Liberando impressora do processo: " + PID);
-            resourcesManager.refoundPrinter(PID);
+            resourcesManager.refundPrinter(PID);
             resourcesManager.getPrinter().getSemaphore().release();
         }
         if (this.modems) {
             Logger.debug("Liberando modem do processo: " + PID);
-            if (resourcesManager.refoundModem(PID)) {
+            if (resourcesManager.refundModem(PID)) {
                 resourcesManager.getModem().getSemaphore().release();
             }
         }
         if (this.sata) {
             Logger.debug("Liberando sata do processo: " + PID);
-            resourcesManager.refoundSata(PID);
+            resourcesManager.refundSata(PID);
             resourcesManager.getSata().getSemaphore().release();
         }
     }
@@ -195,18 +229,6 @@ public class Process {
 
     public ProcessStatus getStatus() {
         return status;
-    }
-
-    public int getOffset() {
-        return offset;
-    }
-
-    public int getBlocks() {
-        return blocks;
-    }
-
-    public Semaphore getStatusSemaphore() {
-        return statusSemaphore;
     }
 
     @Override

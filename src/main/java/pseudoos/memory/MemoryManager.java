@@ -24,20 +24,18 @@ public class MemoryManager {
         this.memory = BlockUtils.generateEmptyBlocks(1024);
     }
 
-    public List<Block> getRealTimeBlocks() {
-        return memory.subList(0, 64);
-    }
+    public List<Block> getRealTimeBlocks() { return memory.subList(0, 64); }
 
     public List<Block> getUserBlocks() {
         return memory.subList(64, 1024);
     }
 
 
-    public int allocateRealTimeBlocks(final int size) {
+    public int allocateRealTimeBlocks(final int size) throws NotEnoughMemoryException {
         return BlockUtils.firstFit(getRealTimeBlocks(), size).orElseThrow(NotEnoughMemoryException::new);
     }
 
-    public int allocateUserBlocks(final int size) {
+    public int allocateUserBlocks(final int size) throws NotEnoughMemoryException {
         return BlockUtils.firstFit(getUserBlocks(), size).orElseThrow(NotEnoughMemoryException::new);
     }
 
@@ -54,4 +52,5 @@ public class MemoryManager {
             getUserBlocks().get(i).free();
         }
     }
+
 }

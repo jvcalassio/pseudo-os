@@ -1,7 +1,6 @@
 package processes;
 
 import exception.NotEnoughMemoryException;
-import memory.MemoryManager;
 import queues.Scheduler;
 import util.Logger;
 
@@ -41,28 +40,17 @@ public class ProcessManager {
         this.finishedProcesses = new Semaphore(0);
     }
 
-
     public void createProcess(final ProcessCreationRequest creationRequest) {
         try {
-            int offset;
-            if (creationRequest.getPriority() == 0) {
-                offset = MemoryManager.getInstance().allocateRealTimeBlocks(creationRequest.getBlocks());
-            } else {
-                offset = MemoryManager.getInstance().allocateUserBlocks(creationRequest.getBlocks());
-            }
-            final Process createdProcess = new Process(creationRequest, offset);
+            final Process createdProcess = new Process(creationRequest);
 
             if (!processList.containsKey(createdProcess.getPID())) {
                 processList.put(createdProcess.getPID(), createdProcess);
             }
             createdProcess.ready();
         } catch (NotEnoughMemoryException e) {
-            final Process createdProcess = new Process(creationRequest, 0);
-            createdProcess.finished();
-            if (!processList.containsKey(createdProcess.getPID())) {
-                processList.put(createdProcess.getPID(), createdProcess);
-            }
-            throw new NotEnoughMemoryException(createdProcess.getPID(), e);
+            Logger.info("O processo " + e.getPID() + " nao foi criado por falta de memoria.");
+            this.finishedProcesses.release();
         }
     }
 
@@ -74,24 +62,8 @@ public class ProcessManager {
         } else if (newStatus == ProcessStatus.BLOCKED) {
             this.blockedProcesses.add(process);
         } else if (newStatus == ProcessStatus.FINISHED) {
-            if (process.getProcessPriority() == 0) {
-                MemoryManager.getInstance().freeRealTimeBlocks(process.getOffset(), process.getBlocks());
-            } else {
-                MemoryManager.getInstance().freeUserBlocks(process.getOffset(), process.getBlocks());
-            }
-            process.refoundResources();
-            Logger.info("P" + PID + " return SIGINT");
             this.finishedProcesses.release();
         }
-    }
-
-
-    public Semaphore getFinishedProcesses() {
-        return finishedProcesses;
-    }
-
-    public ConcurrentMap<Integer, Process> getProcessList() {
-        return processList;
     }
 
     public Thread createReadyRunnerThread() {
@@ -181,6 +153,14 @@ public class ProcessManager {
             blockedRunner.interrupt();
             readyRunner.interrupt();
         }
+    }
+
+    public Semaphore getFinishedProcesses() {
+        return finishedProcesses;
+    }
+
+    public ConcurrentMap<Integer, Process> getProcessList() {
+        return processList;
     }
 
 }
