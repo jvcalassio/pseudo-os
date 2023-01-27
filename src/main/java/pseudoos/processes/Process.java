@@ -48,7 +48,11 @@ public class Process {
         this.running();
 
         while (status == ProcessStatus.RUNNING && !Thread.currentThread().isInterrupted()) {
-            time -= 0.001;
+            try {
+                Thread.sleep(1);
+                time -= 0.001;
+            } catch (InterruptedException ignored) {}
+
 
             if (time <= 0) {
                 finished();

@@ -37,7 +37,7 @@ public class Dispatcher {
                 CPU.join();
             }
         } catch (InterruptedException e) {
-            throw new RuntimeException(e);
+            Logger.debug("Dispatcher interrompido");
         }
 
         isDispatcherReady.release();

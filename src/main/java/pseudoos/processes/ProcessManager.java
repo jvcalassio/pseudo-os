@@ -8,8 +8,6 @@ import util.Logger;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -57,7 +55,6 @@ public class ProcessManager {
             if (!processList.containsKey(createdProcess.getPID())) {
                 processList.put(createdProcess.getPID(), createdProcess);
             }
-//            readyProcess(createdProcess);
             createdProcess.ready();
         } catch (NotEnoughMemoryException e) {
             final Process createdProcess = new Process(creationRequest, 0);
