@@ -41,13 +41,24 @@ public class BlockUtils {
                     possibleInitialPosition = firstFreeBlock;
                 }
                 if(blockList.indexOf(blk) == possibleInitialPosition + size - 1){
-                    // se tiver, alocar e retornar o numero do bloco em que comeca
-                    for(int i = firstFreeBlock; i < firstFreeBlock + size; i++){
-                        blockList.get(i).alloc((int) (Math.random() * 1000));
+                    // se tiver, verifica e, se estiver tudo vazio, alocar e retornar o numero do bloco em que comeca
+                    boolean allFree = true;
+                    for(int i = firstFreeBlock; i < firstFreeBlock + size - 1; i++){
+                        if(blockList.get(i).isUsed()){
+                            allFree = false;
+                            break;
+                        }
                     }
-
-                    return Optional.of(firstFreeBlock);
+                    if(allFree) {
+                        for (int i = firstFreeBlock; i < firstFreeBlock + size; i++) {
+                            blockList.get(i).alloc((int) (Math.random() * 1000));
+                        }
+                        return Optional.of(firstFreeBlock);
+                    }
                 }
+            }else{
+                firstFreeBlock = -1;
+                possibleInitialPosition = -1;
             }
         }
         return Optional.empty();

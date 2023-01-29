@@ -72,18 +72,22 @@ public class ResourcesManager {
         throw new InsufficientResources("SATA");
     }
 
-    public void refundScanner(int PID) {
+    public boolean refundScanner(int PID) {
         if (scanner.getPIDs().contains(PID)) {
             scanner.setQuantity(scanner.getQuantity() + 1);
             scanner.removePID(PID);
+            return true;
         }
+        return false;
     }
 
-    public void refundPrinter(int PID) {
+    public boolean refundPrinter(int PID) {
         if (printer.getPIDs().contains(PID)) {
             printer.setQuantity(printer.getQuantity() + 1);
             printer.removePID(PID);
+            return true;
         }
+        return false;
     }
 
     public boolean refundModem(int PID) {
@@ -95,11 +99,13 @@ public class ResourcesManager {
         return false;
     }
 
-    public void refundSata(int PID) {
+    public boolean refundSata(int PID) {
         if (sata.getPIDs().contains(PID)) {
             sata.setQuantity(sata.getQuantity() + 1);
             sata.removePID(PID);
+            return true;
         }
+        return false;
     }
 
     public Resource getScanner() {

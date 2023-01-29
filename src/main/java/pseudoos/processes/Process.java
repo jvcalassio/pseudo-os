@@ -198,13 +198,15 @@ public class Process {
         ResourcesManager resourcesManager = ResourcesManager.getInstance();
         if (this.scanners) {
             Logger.debug("Liberando scanner do processo: " + PID);
-            resourcesManager.refundScanner(PID);
-            resourcesManager.getScanner().getSemaphore().release();
+            if(resourcesManager.refundScanner(PID)) {
+                resourcesManager.getScanner().getSemaphore().release();
+            }
         }
         if (this.printers) {
             Logger.debug("Liberando impressora do processo: " + PID);
-            resourcesManager.refundPrinter(PID);
-            resourcesManager.getPrinter().getSemaphore().release();
+            if(resourcesManager.refundPrinter(PID)) {
+                resourcesManager.getPrinter().getSemaphore().release();
+            }
         }
         if (this.modems) {
             Logger.debug("Liberando modem do processo: " + PID);
@@ -214,8 +216,9 @@ public class Process {
         }
         if (this.sata) {
             Logger.debug("Liberando sata do processo: " + PID);
-            resourcesManager.refundSata(PID);
-            resourcesManager.getSata().getSemaphore().release();
+            if(resourcesManager.refundSata(PID)) {
+                resourcesManager.getSata().getSemaphore().release();
+            }
         }
     }
 
