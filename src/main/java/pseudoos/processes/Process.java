@@ -14,7 +14,7 @@ public class Process {
     public static int processCounter = 0;
     private final Integer PID;
     private Double time;
-    private final int priority;
+    private int priority;
     private final int blocks;
     private int offset;
     private final boolean printers;
@@ -51,10 +51,13 @@ public class Process {
 
         this.running();
 
+        ProcessManager processManager = ProcessManager.getInstance();
+
         while (status == ProcessStatus.RUNNING && !Thread.currentThread().isInterrupted()) {
             try {
                 Thread.sleep(1);
                 time -= 0.001;
+                processManager.addUsage(PID, 1);
             } catch (InterruptedException ignored) {}
 
 
@@ -228,6 +231,10 @@ public class Process {
 
     public Integer getProcessPriority() {
         return priority;
+    }
+
+    public void setProcessPriority(Integer priority) {
+        this.priority = priority;
     }
 
     public ProcessStatus getStatus() {

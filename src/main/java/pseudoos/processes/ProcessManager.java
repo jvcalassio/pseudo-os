@@ -7,6 +7,7 @@ import util.Logger;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.*;
 
@@ -21,6 +22,7 @@ public class ProcessManager {
     private final Thread blockedRunner;
     private final Thread monitorRunner;
     private final Semaphore finishedProcesses;
+    private final Map<Integer, Integer> listOfUsage;
 
     public static ProcessManager getInstance() {
         if (instance == null) {
@@ -38,6 +40,7 @@ public class ProcessManager {
         this.monitorRunner = createProcessMonitor();
         this.processList = new ConcurrentHashMap<>();
         this.finishedProcesses = new Semaphore(0);
+        this.listOfUsage = new HashMap<>();
     }
 
     public void createProcess(final ProcessCreationRequest creationRequest) {
@@ -161,6 +164,30 @@ public class ProcessManager {
 
     public ConcurrentMap<Integer, Process> getProcessList() {
         return processList;
+    }
+
+    public void addUsage(Integer PID, Integer time) {
+        if (listOfUsage.containsKey(PID)) {
+
+            listOfUsage.put(PID, listOfUsage.get(PID) + time);
+        } else {
+            listOfUsage.put(PID, time);
+        }
+    }
+
+    public Integer getUsage(Integer PID) {
+        return listOfUsage.get(PID) == null ? 0 : listOfUsage.get(PID);
+    }
+
+    public Integer getAverageUsage() {
+        Integer totalUsage = 0;
+
+        if(listOfUsage.size() == 0) return 0;
+
+        for (Integer PID : listOfUsage.keySet()) {
+            totalUsage += listOfUsage.get(PID);
+        }
+        return totalUsage / listOfUsage.size();
     }
 
 }
