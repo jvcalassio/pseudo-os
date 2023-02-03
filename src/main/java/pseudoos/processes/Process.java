@@ -117,6 +117,9 @@ public class Process {
     }
 
     private void requestMemory() throws NotEnoughMemoryException {
+        if (this.PID == 2) {
+            Logger.debug("p2");
+        }
         if (this.offset == -1) {
             try {
                 if (this.priority == 0) {

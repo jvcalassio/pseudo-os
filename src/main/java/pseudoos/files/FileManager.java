@@ -19,6 +19,7 @@ public class FileManager {
     private static FileManager instance;
     private int totalBlocks;
     private List<Block> fileSystem;
+    private BitSet allocationMap;
     private final ConcurrentMap<String, FileData> fileMap;
     private final ConcurrentMap<Integer, List<FileInstruction>> instructionMap;
 
@@ -34,6 +35,7 @@ public class FileManager {
         this.fileMap = new ConcurrentHashMap<>();
         this.fileSystem = new LinkedList<>();
         this.instructionMap = new ConcurrentHashMap<>();
+        this.allocationMap = new BitSet();
     }
 
     public void initialize(final int numberOfBlocks,
@@ -41,13 +43,15 @@ public class FileManager {
                            final List<FileInstruction> instructions) throws NotEnoughDiskException {
         this.totalBlocks = numberOfBlocks;
         this.fileSystem = BlockUtils.generateEmptyBlocks(this.totalBlocks);
+        this.allocationMap = new BitSet(this.totalBlocks + 1);
+        this.allocationMap.set(this.totalBlocks);
         for (FileCreationRequest fileCreationRequest : fileCreationRequests) {
             createFile(fileCreationRequest);
         }
 
-        fileMap.forEach((key, value) ->
-                BlockUtils.allocateBlocks(value.getStartingPosition(),
-                        value.getStartingPosition() + value.getSize(), this.fileSystem)
+        this.fileMap.forEach((key, value) ->
+            BlockUtils.allocateBlocks(value.getStartingPosition(),
+                    value.getStartingPosition() + value.getSize(), this.fileSystem, this.allocationMap)
         );
 
         instructions.forEach(instruction -> {
@@ -59,7 +63,15 @@ public class FileManager {
     }
 
     private int allocateDiskBlocks(final int size) throws NotEnoughDiskException {
-        return BlockUtils.firstFit(this.fileSystem, size).orElseThrow(NotEnoughDiskException::new);
+        final int startingBlock = BlockUtils.firstFit(this.allocationMap, size)
+                                            .orElseThrow(NotEnoughDiskException::new);
+        final int endingBlock = startingBlock + size;
+
+        if (startingBlock >= 0 && endingBlock <= this.totalBlocks) {
+            BlockUtils.allocateBlocks(startingBlock, endingBlock, this.fileSystem, this.allocationMap);
+            return startingBlock;
+        }
+        throw new NotEnoughDiskException();
     }
 
     public void processNextInstruction(final Integer PID) {
@@ -112,11 +124,11 @@ public class FileManager {
 
                 final FileData fileData = fileMap.get(fileCreationRequest.getFileName());
                 final String message = MessageFormat.format(
-                        "O processo {0} criou o arquivo {1} (blocos {2}:{3})",
+                        "O processo {0} criou o arquivo {1} (blocos [{2}:{3}])",
                         fileInstruction.getPID(),
                         fileInstruction.getFileName(),
                         fileData.getStartingPosition(),
-                        fileData.getStartingPosition() + fileData.getSize()
+                        fileData.getStartingPosition() + fileData.getSize() - 1
                 );
 
                 Logger.info(message);
@@ -160,8 +172,9 @@ public class FileManager {
 
         final FileData file = fileMap.get(fileName);
 
-        BlockUtils.freeBlocks(file.getStartingPosition(), file.getStartingPosition() + file.getSize(), fileSystem);
-        fileMap.remove(fileName);
+        BlockUtils.freeBlocks(file.getStartingPosition(),
+                file.getStartingPosition() + file.getSize(), this.fileSystem, this.allocationMap);
+        this.fileMap.remove(fileName);
     }
 
     private FileOwnedBy mapByPID(final Integer PID) {

@@ -107,7 +107,7 @@ public class ProcessManager {
         return new Thread(() -> {
             BufferedWriter fileWriter;
             try {
-                fileWriter = new BufferedWriter(new FileWriter("out.txt"));
+                fileWriter = new BufferedWriter(new FileWriter("out/monitor.txt"));
             } catch (IOException e) {
                 throw new RuntimeException("Erro ao criar output do ProcessMonitor");
             }
@@ -140,19 +140,28 @@ public class ProcessManager {
     }
 
     public void start() {
+        final String profile = System.getProperty("profile");
+
         if (!running) {
             running = true;
             readyRunner.start();
             blockedRunner.start();
-            monitorRunner.start();
+
+            if ("debug".equals(profile)) {
+                monitorRunner.start();
+            }
             Logger.debug("Iniciando ProcessManager");
         }
     }
 
     public void stop() {
+        final String profile = System.getProperty("profile");
+
         if (running) {
             Logger.debug("Finalizando ProcessManager");
-            monitorRunner.interrupt();
+            if ("debug".equals(profile)) {
+                monitorRunner.interrupt();
+            }
             blockedRunner.interrupt();
             readyRunner.interrupt();
         }
