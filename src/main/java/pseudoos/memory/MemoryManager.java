@@ -43,6 +43,7 @@ public class MemoryManager {
         final int endingBlock = startingBlock + size;
 
         if (startingBlock >= 0 && endingBlock <= 64) {
+            Logger.debug("Alocando memória real-time nos blocos [" + startingBlock + ":" + (endingBlock - 1) + "]");
             BlockUtils.allocateBlocks(startingBlock, endingBlock, this.memory, this.allocationMap);
             return startingBlock;
         }
@@ -51,11 +52,15 @@ public class MemoryManager {
 
     public int allocateUserBlocks(final int size) throws NotEnoughMemoryException {
         final int startingBlock = BlockUtils.firstFit(getUserAllocationMap(), size)
-                                            .orElseThrow(NotEnoughMemoryException::new) + 64;
-        final int endingBlock = startingBlock + size + 64;
+                                            .orElseThrow(NotEnoughMemoryException::new);
+        final int endingBlock = startingBlock + size;
 
-        if (startingBlock >= 64 && endingBlock <= 1024) {
-            BlockUtils.allocateBlocks(startingBlock, endingBlock, this.memory, this.allocationMap);
+        final int paddedStartingBlock = startingBlock + 64;
+        final int paddedEndingBlock = endingBlock + 64;
+
+        if (paddedStartingBlock >= 64 && paddedEndingBlock <= 1024) {
+            Logger.debug("Alocando memória de usuário nos blocos [" + startingBlock + ":" + (endingBlock - 1) + "]");
+            BlockUtils.allocateBlocks(paddedStartingBlock, paddedEndingBlock, this.memory, this.allocationMap);
             return startingBlock;
         }
         throw new NotEnoughMemoryException();
