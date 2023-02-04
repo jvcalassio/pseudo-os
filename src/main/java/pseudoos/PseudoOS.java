@@ -1,5 +1,4 @@
 import exception.NotEnoughDiskException;
-import exception.NotEnoughMemoryException;
 import files.FileManager;
 import inputreader.file.FileReader;
 import inputreader.file.FileSystemInitializationRequest;

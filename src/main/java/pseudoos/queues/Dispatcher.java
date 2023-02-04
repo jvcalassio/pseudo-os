@@ -56,12 +56,12 @@ public class Dispatcher {
 
         // aumentar a prioridade - não pode fazer fazer um processo de usuario virar um processo de tempo real
         if (processManager.getUsage(process.getPID()) < average && atualPriority >= 2) {
-            Logger.info("Processo " + process.getPID() + " aumentou a prioridade de " + atualPriority + " para " + (atualPriority - 1));
+            Logger.debug("Processo " + process.getPID() + " aumentou a prioridade de " + atualPriority + " para " + (atualPriority - 1));
             process.setProcessPriority(atualPriority - 1);
         }
 
         else if (processManager.getUsage(process.getPID()) > average && atualPriority >= 1 && atualPriority <= 3) {
-            Logger.info("Processo " + process.getPID() + " diminuiu a prioridade de " + atualPriority + " para " + (atualPriority + 1));
+            Logger.debug("Processo " + process.getPID() + " diminuiu a prioridade de " + atualPriority + " para " + (atualPriority + 1));
             process.setProcessPriority(atualPriority + 1);
         }
     }
