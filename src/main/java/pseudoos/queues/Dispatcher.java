@@ -28,6 +28,7 @@ public class Dispatcher {
         try {
             final Thread CPU = new Thread(process::run);
             Logger.debug("Iniciando Processo " + process.getPID());
+            Logger.debug("dispatcher => \n" + process.toString() + "\n");
             if (process.getProcessPriority() == 0) {
                 CPU.start();
                 CPU.join();

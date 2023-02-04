@@ -54,11 +54,15 @@ public class Process {
         ProcessManager processManager = ProcessManager.getInstance();
 
         while (status == ProcessStatus.RUNNING && !Thread.currentThread().isInterrupted()) {
+            boolean willStop = false;
             try {
                 Thread.sleep(1);
+            } catch (InterruptedException ignored) {
+                willStop = true;
+            } finally {
                 time -= 0.001;
                 processManager.addUsage(PID, 1);
-            } catch (InterruptedException ignored) {}
+            }
 
 
             if (time <= 0) {
@@ -71,6 +75,10 @@ public class Process {
                 PC++;
                 FileManager.getInstance().processNextInstruction(PID);
                 Logger.info("P" + PID + " instruction " + PC);
+            }
+
+            if (willStop) {
+                break;
             }
         }
 
@@ -246,18 +254,16 @@ public class Process {
 
     @Override
     public String toString() {
-        return "Process{" +
-                "PID=" + PID +
-                ", time=" + time +
-                ", priority=" + priority +
-                ", blocks=" + blocks +
-                ", offset=" + offset +
-                ", printers=" + printers +
-                ", scanners=" + scanners +
-                ", modems=" + modems +
-                ", sata=" + sata +
-                ", status=" + status +
-                ", PC=" + PC +
-                '}';
+        return "PID: " + PID +
+               "\ntime: " + time +
+               "\npriority: " + priority +
+               "\nblocks: " + blocks +
+               "\noffset: " + offset +
+               "\nprinters: " + printers +
+               "\nscanners: " + scanners +
+               "\nmodems: " + modems +
+               "\nsata: " + sata +
+               "\nstatus: " + status +
+               "\nPC: " + PC;
     }
 }
